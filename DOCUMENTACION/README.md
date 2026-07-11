@@ -15,6 +15,7 @@ proyecto, no del equipo).
 | [CHANGELOG.md](CHANGELOG.md) | Registro cronológico detallado de cambios (más granular que VERSIONES). |
 | [IDEAS.md](IDEAS.md) | Ideas futuras, fuera del alcance de la V1, sin comprometerse a nada. |
 | [BUGS.md](BUGS.md) | Bugs conocidos, abiertos y resueltos. |
+| [PLAN_UX_PREMIUM.md](PLAN_UX_PREMIUM.md) | Propuesta en curso: mejora visual/UX premium del Portal del Cliente. |
 
 ## Regla de mantenimiento
 
