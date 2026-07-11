@@ -32,6 +32,20 @@ Primer estado estable versionado del proyecto.
   Guzmán (`resources`, `documents`, `links` siguen con placeholders) —
   el cliente/agencia los completa directamente en `js/data.js`.
 
+## v0.3 — UX Premium (2026-07-11)
+
+Las 4 fases del [plan de UX Premium](PLAN_UX_PREMIUM.md) implementadas
+sobre la V1, sin cambiar la arquitectura de base:
+
+- Personalización de marca (portada, color, gate de admin).
+- Dashboard visual (barra de progreso, estados con color/ícono).
+- Bitácora como timeline visual.
+- Links importantes con 3 variantes de presentación.
+
+Pendiente real: datos de producción de Juan (logos, links, recursos) —
+contenido, no código. Fase 5 del plan (persistencia en `localStorage`
+del orden de bloques) no incluida en este pase.
+
 ## Deployment — 2026-07-11
 
 - Repo conectado a GitHub: `https://github.com/REELSUPRA/portal`

@@ -25,6 +25,9 @@
  *    editan desde el panel admin, igual que logoUrl.
  *  - agency.adminPassphrase: contraseña simple para entrar al modo
  *    admin. No es seguridad real, solo evita el acceso accidental.
+ *  - links[].style ("button" | "card" | "link") + links[].icon:
+ *    cómo se presenta cada acceso rápido. Sin style, es un enlace
+ *    simple (comportamiento de siempre).
  * ============================================================
  */
 
@@ -156,9 +159,12 @@ window.CLIENT_DATA = {
         { label: "Brief de marca — JGA Realtor", url: "#" },
       ],
 
+      // style: "button" | "card" | "link" (default) — define cómo se
+      // presenta cada acceso. icon: nombre de ícono lucide (opcional).
       links: [
-        { label: "Carpeta de material en bruto", url: "#" },
-        { label: "Calendario editorial compartido", url: "#" },
+        { label: "Carpeta de material en bruto", url: "#", style: "button", icon: "folder" },
+        { label: "Calendario editorial compartido", url: "#", style: "card", icon: "calendar-days" },
+        { label: "Escribir por WhatsApp", url: "#", icon: "message-circle" },
       ],
 
       // Solo reuniones u otros eventos manuales. Las publicaciones
@@ -275,8 +281,9 @@ window.CLIENT_DATA = {
       ],
 
       links: [
-        { label: "Carpeta de material en bruto", url: "#" },
-        { label: "Calendario editorial compartido", url: "#" },
+        { label: "Carpeta de material en bruto", url: "#", style: "button", icon: "folder" },
+        { label: "Calendario editorial compartido", url: "#", style: "card", icon: "calendar-days" },
+        { label: "Escribir por WhatsApp", url: "#", icon: "message-circle" },
       ],
 
       calendar: [

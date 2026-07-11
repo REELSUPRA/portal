@@ -764,6 +764,57 @@ button {
   color: var(--rs-red);
 }
 
+/* ============================================================
+   LINKS IMPORTANTES — variantes botón / tarjeta / enlace simple
+   ============================================================ */
+
+.link-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.link-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.link-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--rs-gray-100);
+  border-radius: var(--radius-md);
+  transition: border-color var(--duration) var(--ease), transform var(--duration) var(--ease);
+}
+
+.link-card:hover {
+  border-color: var(--rs-red);
+  transform: translateY(-2px);
+}
+
+.link-card__icon {
+  display: flex;
+  color: var(--rs-red);
+  flex-shrink: 0;
+}
+
+.link-card__label {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.link-card__arrow {
+  color: var(--rs-gray-300);
+  width: 14px;
+  height: 14px;
+}
+
 /* Calendario simple */
 .calendar-list li {
   display: flex;

@@ -1,6 +1,6 @@
 # Plan — Experiencia Premium del Portal del Cliente
 
-Estado: **Fases 1, 2 y 3 implementadas** (2026-07-11). Fase 4 pendiente. Este
+Estado: **Fases 1 a 4 implementadas** (2026-07-11) — plan completo. Este
 documento responde al pedido
 de mejora visual/UX profunda sin cambiar la arquitectura de base. Se
 actualiza a "implementado" ítem por ítem en [CHANGELOG.md](CHANGELOG.md)
@@ -333,3 +333,35 @@ de passphrase para el admin. Implementado en Fase 1.
 - Verificado con Chromium headless: sin errores; confirmado
   visualmente que el Roadmap (que comparte el componente) no tuvo
   ninguna regresión.
+
+### Fase 4 — Centro de accesos (2026-07-11) — ✅ implementada
+
+- `blockLinks()` ahora agrupa los links por `style` (`button` | `card`
+  | `link`, default) y renderiza cada grupo con su propio look:
+  - `button` → `.btn.btn--primary` (reutilizado, cero CSS nueva).
+  - `card` → `.link-card` (única clase nueva de esta fase), grid
+    responsive (`auto-fit`, min 200px).
+  - `link` (default, sin romper links existentes sin `style`) →
+    `.link-list` (el mismo de siempre).
+  - `links[].icon` opcional, default `"link"` para las 3 variantes.
+- Datos de ejemplo actualizados en ambos proyectos mostrando las 3
+  variantes a la vez (Drive como botón, Calendario como tarjeta,
+  WhatsApp como link simple).
+- **Bug encontrado y corregido en la propia verificación:** el grid de
+  tarjetas usaba `auto-fill` en vez de `auto-fit` — con una sola
+  tarjeta quedaba angosta y el texto se cortaba mal. Corregido antes de
+  cerrar la fase.
+- Verificado con Chromium headless + revisión visual: sin errores,
+  las 3 variantes se ven distinguibles y prolijas.
+
+---
+
+## Plan completo — cierre
+
+Las 4 fases del plan de UX Premium quedaron implementadas el
+2026-07-11, todas verificadas sin errores y sin tocar la arquitectura
+de base (sitio estático, sin backend, mismo motor de bloques). Pendiente
+real para una entrega 100% terminada a Juan: datos reales (logos,
+links, recursos) — es contenido, no código. La Fase 5 (persistencia en
+`localStorage` del orden de bloques) no se incluyó en este pase; queda
+como próxima mejora si se decide priorizarla.

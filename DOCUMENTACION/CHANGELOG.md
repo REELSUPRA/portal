@@ -3,6 +3,22 @@
 Registro cronológico de cambios, más granular que
 [VERSIONES.md](VERSIONES.md). Orden: más reciente arriba.
 
+## 2026-07-11 (UX Premium — Fase 4, cierre del plan)
+
+- **Feature:** `blockLinks()` soporta 3 variantes por link
+  (`style: "button" | "card" | "link"`) — botón (`.btn--primary`
+  reutilizado), tarjeta (`.link-card`, nueva) o enlace simple
+  (`.link-list`, el de siempre, default sin romper datos existentes).
+- **Fix:** `.link-cards` usaba `grid-template-columns: repeat(auto-fill, ...)`
+  — con una sola tarjeta quedaba angosta y el texto se cortaba.
+  Cambiado a `auto-fit`. Encontrado y corregido en la propia
+  verificación visual de esta fase.
+- **Data:** `links[].style` + `links[].icon` en ambos proyectos de
+  ejemplo, mostrando las 3 variantes.
+- Con esta fase se completan las 4 fases del plan de UX Premium. Ver
+  cierre en [PLAN_UX_PREMIUM.md](PLAN_UX_PREMIUM.md#plan-completo--cierre).
+- Verificado con Chromium headless: sin errores.
+
 ## 2026-07-11 (UX Premium — Fase 3)
 
 - **Feature:** Bitácora convertida en timeline visual — reutiliza el

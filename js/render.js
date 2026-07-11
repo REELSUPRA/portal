@@ -276,9 +276,36 @@ const RS = (() => {
       .map((d) => `<li><a href="${esc(d.url)}" target="_blank" rel="noopener">${icon("file-text")}${esc(d.label)}</a></li>`).join("")}</ul>`;
   }
 
+  // Cada link se presenta como botón premium, tarjeta o enlace simple
+  // según links[].style — reutiliza .btn y .side-card ya existentes,
+  // .link-card es la única clase chica nueva.
   function blockLinks(project) {
-    return `<ul class="link-list">${(project.links || [])
-      .map((l) => `<li><a href="${esc(l.url)}" target="_blank" rel="noopener">${icon("link")}${esc(l.label)}</a></li>`).join("")}</ul>`;
+    const links = project.links || [];
+    if (!links.length) return `<p class="empty-hint">No hay links cargados todavía.</p>`;
+
+    const buttons = links.filter((l) => l.style === "button");
+    const cards = links.filter((l) => l.style === "card");
+    const simple = links.filter((l) => !l.style || l.style === "link");
+
+    const buttonsHtml = buttons.length
+      ? `<div class="link-buttons">${buttons.map((l) => `
+          <a class="btn btn--primary" href="${esc(l.url)}" target="_blank" rel="noopener">${icon(l.icon || "link")}${esc(l.label)}</a>`).join("")}</div>`
+      : "";
+
+    const cardsHtml = cards.length
+      ? `<div class="link-cards">${cards.map((l) => `
+          <a class="link-card" href="${esc(l.url)}" target="_blank" rel="noopener">
+            <span class="link-card__icon">${icon(l.icon || "link")}</span>
+            <span class="link-card__label">${esc(l.label)}</span>
+            ${icon("arrow-up-right", "link-card__arrow")}
+          </a>`).join("")}</div>`
+      : "";
+
+    const simpleHtml = simple.length
+      ? `<ul class="link-list">${simple.map((l) => `<li><a href="${esc(l.url)}" target="_blank" rel="noopener">${icon(l.icon || "link")}${esc(l.label)}</a></li>`).join("")}</ul>`
+      : "";
+
+    return `${buttonsHtml}${cardsHtml}${simpleHtml}`;
   }
 
   // ----- Piezas de contenido -----
