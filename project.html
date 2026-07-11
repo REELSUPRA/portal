@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Proyecto — ReelSupra</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
+
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+  <header id="topbar" class="topbar"></header>
+
+  <main class="shell">
+    <section id="projectHero" class="project-hero"></section>
+
+    <!-- Los módulos se dibujan dinámicamente según el orden guardado
+         para este proyecto (project.blocks en data.js). En modo admin
+         se pueden arrastrar para reordenar y ocultar con el ícono de ojo. -->
+    <div id="blocksContainer" class="blocks-container"></div>
+  </main>
+
+  <footer class="footer">
+    <div class="shell footer__inner">
+      <span>ReelSupra</span>
+      <span>Portal del cliente</span>
+    </div>
+  </footer>
+
+  <script src="js/data.js"></script>
+  <script src="js/render.js"></script>
+  <script src="js/admin.js"></script>
+  <script>
+    function boot() {
+      RSAdmin.detectAdminMode();
+      RS.renderTopbar({ showBack: true });
+      RS.renderProjectDetail();
+      RS.hydrateIcons();
+      RSAdmin.init();
+    }
+    document.addEventListener("DOMContentLoaded", boot);
+  </script>
+</body>
+</html>

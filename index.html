@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Portal del Cliente — ReelSupra</title>
+  <meta name="description" content="Portal del cliente ReelSupra: estado de proyectos, roadmap y recursos." />
+
+  <!-- Tipografía -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <!-- Íconos -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
+
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+  <div id="announcement" class="announcement"></div>
+
+  <header id="topbar" class="topbar"></header>
+
+  <main class="shell">
+    <section id="hero" class="hero"></section>
+
+    <section class="section">
+      <div class="section__head">
+        <span class="section__title">Tus proyectos</span>
+      </div>
+      <div id="projectGrid" class="project-grid stagger"></div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="shell footer__inner">
+      <span>ReelSupra</span>
+      <span>Portal del cliente</span>
+    </div>
+  </footer>
+
+  <!-- Datos del cliente (única fuente editable) -->
+  <script src="js/data.js"></script>
+  <script src="js/render.js"></script>
+  <script src="js/admin.js"></script>
+  <script>
+    function boot() {
+      RSAdmin.detectAdminMode();
+      RS.renderTopbar({ showBack: false });
+      RS.renderAnnouncement();
+      RS.renderHero();
+      RS.renderProjectGrid();
+      RS.hydrateIcons();
+      RSAdmin.init();
+    }
+    document.addEventListener("DOMContentLoaded", boot);
+  </script>
+</body>
+</html>
