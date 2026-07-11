@@ -153,10 +153,35 @@ const LIST_SCHEMAS = {
   solo lectura, ya existía como patrón). El editor, el modal, el botón
   del panel y el conteo salen solos — no se escribe UI nueva.
 - **Qué no cubre esto:** piezas de contenido (tiene su propio editor
-  más especializado, con estado delivered/pending), links (tiene 3
-  variantes de presentación — queda para la Fase 3), y el
+  más especializado, con estado delivered/pending) y el
   orden/visibilidad de bloques completos (ya resuelto por drag&drop en
   la página, sin relación con este motor).
+
+## Header Inteligente (`project.links` + derivados, en `js/render.js`)
+
+`links` dejó de ser un bloque más de la página — es la fuente de datos
+de los **accesos rápidos** del encabezado del proyecto. Se sigue
+editando con el mismo editor genérico de listas (`LIST_SCHEMAS.links`),
+solo que ya no se dibuja como card al final de la página
+(`BLOCK_DEFS.links` sigue existiendo únicamente para que el editor
+tenga título/ícono — no está en `defaultBlockOrder()`, así que
+`renderBlocks()` nunca lo pinta como card).
+
+- **`QUICKLINK_TYPES`**: preset de ícono+color por `type`
+  (whatsapp/drive/instagram/youtube/facebook/tiktok/calendar/custom).
+  `item.icon`/`item.color` opcionales anulan al del tipo. Íconos
+  elegidos entre los ya confirmados en este proyecto (no glifos de
+  marca, que Lucide puede no incluir según versión del CDN).
+- **Resumen y actividad — todo derivado, nada manual:**
+  `roadmapSummary(project)` cuenta fases con `status: "done"` sobre
+  `project.roadmap`; `projectActivity(project)` lee la bitácora más
+  reciente (última actualización), la última con `type: "delivery"`
+  (última entrega), y el próximo `project.calendar` con fecha futura
+  (próxima reunión). Ninguno es un campo aparte que alguien tenga que
+  mantener sincronizado — editar Bitácora/Calendario/Roadmap desde el
+  editor genérico ya actualiza estos indicadores solo.
+- Progreso general (`contentProgress`, ya existía) se movió del hero
+  a este mismo bloque (`.smart-header`) para no duplicar la barra.
 
 ## Modo administrador (`js/admin.js`)
 

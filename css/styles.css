@@ -457,16 +457,95 @@ button {
   font-size: 13px;
 }
 
-.hero-progress {
+/* ============================================================
+   HEADER INTELIGENTE (accesos rápidos + resumen + actividad)
+   ============================================================ */
+
+.smart-header {
   margin-top: var(--space-6);
-  max-width: 420px;
+  max-width: 560px;
 }
 
-.hero-progress__label {
+.smart-header__progress-label {
   font-size: 12.5px;
   font-weight: 600;
   color: var(--rs-gray-500);
   margin-bottom: var(--space-2);
+}
+
+.quicklinks-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.quicklink-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  transition: transform var(--duration) var(--ease);
+}
+
+.quicklink-pill:hover {
+  transform: translateY(-1px);
+}
+
+.quicklink-pill .icon {
+  width: 14px;
+  height: 14px;
+}
+
+.smart-header__stats {
+  display: flex;
+  gap: var(--space-8);
+  margin: var(--space-6) 0;
+}
+
+.smart-stat__value {
+  font-family: var(--font-mono), var(--font-sans);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.smart-stat__label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--rs-gray-300);
+  margin-top: 2px;
+}
+
+.smart-header__activity {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.activity-chip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 13px;
+  color: var(--rs-gray-500);
+}
+
+.activity-chip strong {
+  color: var(--rs-text-primary);
+  font-weight: 600;
+}
+
+.activity-chip .icon {
+  width: 14px;
+  height: 14px;
+  color: var(--rs-gray-300);
+  flex-shrink: 0;
 }
 
 .status-badge {

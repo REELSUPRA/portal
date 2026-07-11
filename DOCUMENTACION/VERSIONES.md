@@ -83,6 +83,18 @@ del orden de bloques) no incluida en este pase.
   radios, sombras, estilos de botón/tarjeta, claro/oscuro) quedan
   pendientes — ver [PLAN_V2_CMS.md](PLAN_V2_CMS.md).
 
+## v0.7 — Portal Cliente V2, Fase 3: Header Inteligente (2026-07-11)
+
+- Accesos rápidos configurables integrados al encabezado del proyecto
+  (reemplazan el bloque de links al final de la página), editables con
+  el mismo motor genérico de la Fase 2.
+- Resumen de estado (progreso, etapas completadas, material pendiente)
+  e indicadores de actividad (última actualización, última entrega,
+  próxima reunión) — todos calculados a partir de datos ya existentes
+  (Roadmap, Bitácora, Calendario), sin campos manuales nuevos.
+- Fase 4 (sistema de diseño: radios, sombras, estilos de botón/tarjeta,
+  claro/oscuro) queda pendiente — ver [PLAN_V2_CMS.md](PLAN_V2_CMS.md).
+
 ## Deployment — 2026-07-11
 
 - Repo conectado a GitHub: `https://github.com/REELSUPRA/portal`

@@ -3,6 +3,31 @@
 Registro cronológico de cambios, más granular que
 [VERSIONES.md](VERSIONES.md). Orden: más reciente arriba.
 
+## 2026-07-11 (Portal Cliente V2 — Fase 3: Header Inteligente)
+
+- **Feature:** accesos rápidos configurables integrados al encabezado
+  del proyecto (antes eran un bloque al final de la página) — pills de
+  color con 8 tipos preconfigurados (whatsapp/drive/instagram/youtube/
+  facebook/tiktok/calendar/custom) vía `QUICKLINK_TYPES`, editable con
+  el mismo motor genérico de la Fase 2.
+- **Feature:** resumen de estado en el header — progreso (ya existía,
+  consolidado en un solo bloque visual), etapas completadas del
+  roadmap, material pendiente.
+- **Feature:** indicadores de actividad — última actualización, última
+  entrega y próxima reunión, **todos derivados** de Bitácora/Calendario
+  (sin campos manuales nuevos que puedan desincronizarse).
+- **Cambio de datos:** `links[].style`/`.icon` (Fase 4 UX Premium) →
+  `links[].type` + `.icon`/`.color` opcionales. Migrado directo en
+  `data.js` (sin datos de producción reales todavía).
+- **Fix incidental:** una etiqueta HTML mal cerrada (`<\div>`) en el
+  hero del proyecto, presente desde antes de esta sesión — corregida
+  al reescribir esa sección.
+- Ver detalle en [PLAN_V2_CMS.md](PLAN_V2_CMS.md).
+- Verificado con Chromium headless: pills con color correcto, resumen y
+  actividad con valores derivados correctos, bloque viejo de links
+  ausente, edición en vivo sin recargar. Regresión completa sin
+  errores.
+
 ## 2026-07-11 (Portal Cliente V2 — Fase 2: editor genérico de listas)
 
 - **Feature:** `RS.LIST_SCHEMAS` declarativo — 8 listas (Roadmap,

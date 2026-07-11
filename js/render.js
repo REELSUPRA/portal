@@ -38,6 +38,21 @@ const RS = (() => {
     note: { icon: "message-square" },
   };
 
+  // Presets de accesos rápidos (Header Inteligente). Íconos elegidos
+  // entre los ya usados y confirmados en este proyecto — evita
+  // depender de glifos de marca que Lucide puede no incluir según
+  // versión del CDN. El color es un default; item.color lo anula.
+  const QUICKLINK_TYPES = {
+    whatsapp: { icon: "message-circle", color: "#25D366" },
+    drive: { icon: "folder", color: "#4285F4" },
+    instagram: { icon: "at-sign", color: "#C13584" },
+    youtube: { icon: "play-circle", color: "#FF0000" },
+    facebook: { icon: "users", color: "#1877F2" },
+    tiktok: { icon: "music-2", color: "#010101" },
+    calendar: { icon: "calendar-days", color: "#0a0a0a" },
+    custom: { icon: "link", color: "#e02020" },
+  };
+
   // Theme Builder — esquema declarativo. Agregar una variable de tema
   // nueva es agregar una entrada acá; admin.js genera el control
   // (color/select/font/range) y applyTheme() la aplica. No hace falta
@@ -103,6 +118,56 @@ const RS = (() => {
       <div class="progress-bar__track"><div class="progress-bar__fill" style="width:${percent}%"></div></div>
       <span class="progress-bar__label">${percent}%</span>
     </div>`;
+  }
+
+  // Etapas del roadmap ya completadas — reutilizado por el Header
+  // Inteligente. No es un dato aparte: se deriva de project.roadmap,
+  // así que editarlo desde el editor genérico de listas ya lo actualiza.
+  function roadmapSummary(project) {
+    const roadmap = project.roadmap || [];
+    return { done: roadmap.filter((r) => r.status === "done").length, total: roadmap.length };
+  }
+
+  function relativeDays(date) {
+    const diff = Math.round((new Date().setHours(0, 0, 0, 0) - new Date(date).setHours(0, 0, 0, 0)) / 86400000);
+    if (diff <= 0) return "hoy";
+    if (diff === 1) return "hace 1 día";
+    return `hace ${diff} días`;
+  }
+
+  // Última novedad, última entrega y próxima reunión — las tres se
+  // derivan de bitacora/calendar (ya editables desde el editor
+  // genérico de listas), no son campos manuales aparte que puedan
+  // desincronizarse.
+  function projectActivity(project) {
+    const bitacora = (project.bitacora || [])
+      .map((e) => ({ ...e, dateObj: parseISODate(e.date) }))
+      .filter((e) => e.dateObj)
+      .sort((a, b) => b.dateObj - a.dateObj);
+
+    const today = new Date();
+    const nextMeeting = (project.calendar || [])
+      .map((e) => ({ ...e, dateObj: parseISODate(e.date) }))
+      .filter((e) => e.dateObj && e.dateObj >= today)
+      .sort((a, b) => a.dateObj - b.dateObj)[0] || null;
+
+    return {
+      lastUpdate: bitacora[0] || null,
+      lastDelivery: bitacora.find((e) => e.type === "delivery") || null,
+      nextMeeting,
+    };
+  }
+
+  function quickLinksRow(project) {
+    const links = project.links || [];
+    if (!links.length) return "";
+    return `<div class="quicklinks-row">${links.map((l) => {
+      const preset = QUICKLINK_TYPES[l.type] || QUICKLINK_TYPES.custom;
+      const color = l.color || preset.color;
+      const bg = hexToRgba(color, 0.12) || "transparent";
+      const border = hexToRgba(color, 0.35) || color;
+      return `<a class="quicklink-pill" href="${esc(l.url)}" target="_blank" rel="noopener" style="color:${esc(color)}; background:${esc(bg)}; border-color:${esc(border)};">${icon(l.icon || preset.icon)}<span>${esc(l.label)}</span></a>`;
+    }).join("")}</div>`;
   }
 
   function hexToRgba(hex, alpha) {
@@ -528,7 +593,11 @@ const RS = (() => {
     pendingMaterial: { title: "Material pendiente", icon: "hourglass", render: blockPending },
     resources: { title: "Recursos", icon: "bookmark", render: blockResources },
     documents: { title: "Documentos", icon: "file-text", render: blockDocuments },
-    links: { title: "Links importantes", icon: "link", render: blockLinks },
+    // "links" ya no se dibuja como bloque aparte (ver defaultBlockOrder
+    // en data.js) — se integró al Header Inteligente como accesos
+    // rápidos. Se deja la entrada acá porque el editor genérico de
+    // listas (RS.LIST_SCHEMAS) lee título/ícono de este registro.
+    links: { title: "Accesos rápidos", icon: "zap", render: blockLinks },
     bitacora: { title: "Bitácora", icon: "notebook-pen", render: blockBitacora },
     upsells: { title: "Mejoras disponibles", icon: "sparkles", render: blockUpsells },
   };
@@ -604,6 +673,17 @@ const RS = (() => {
       newItem: () => ({ title: "", description: "", ctaLabel: "Consultar", ctaUrl: "" }),
       itemLabel: (item) => item.title || "Nueva mejora",
     },
+    links: {
+      fields: [
+        { key: "label", label: "Nombre", type: "text" },
+        { key: "url", label: "URL", type: "text" },
+        { key: "type", label: "Tipo", type: "select", options: Object.keys(QUICKLINK_TYPES) },
+        { key: "icon", label: "Ícono (opcional, lucide.dev/icons — vacío usa el del tipo)", type: "text" },
+        { key: "color", label: "Color (opcional, anula el del tipo)", type: "color" },
+      ],
+      newItem: () => ({ label: "", url: "", type: "custom", icon: "", color: "" }),
+      itemLabel: (item) => item.label || "Nuevo acceso",
+    },
   };
 
   /* ----------------------------------------------------------
@@ -615,6 +695,9 @@ const RS = (() => {
     if (!project) return;
     const tone = inferStatusTone(project);
     const contentProgressBlock = contentProgress(project);
+    const roadmapStats = roadmapSummary(project);
+    const pendingCount = (project.pendingMaterial || []).length;
+    const activity = projectActivity(project);
 
     const heroEl = document.getElementById("projectHero");
     const logoAdmin = isAdmin()
@@ -637,10 +720,27 @@ const RS = (() => {
         <div class="meta-item"><div class="meta-item__label">Público</div><div class="meta-item__value">${esc(project.audience)}</div></div>
         <div class="meta-item"><div class="meta-item__label">Plan contratado</div><div class="meta-item__value">${esc(project.plan)} — ${esc(project.planDetail)}</div></div>
       </div>
-      ${contentProgressBlock.total ? `<div class="hero-progress">
-        <div class="hero-progress__label">Progreso del proyecto</div>
-        ${progressBar(contentProgressBlock.percent, "lg")}
-      </div>` : ""}`;
+      <div class="smart-header">
+        ${quickLinksRow(project)}
+        ${contentProgressBlock.total ? `
+          <div class="smart-header__progress-label">Progreso del proyecto</div>
+          ${progressBar(contentProgressBlock.percent, "lg")}` : ""}
+        <div class="smart-header__stats">
+          <div class="smart-stat"><div class="smart-stat__value">${roadmapStats.done}/${roadmapStats.total}</div><div class="smart-stat__label">Etapas completadas</div></div>
+          <div class="smart-stat"><div class="smart-stat__value">${pendingCount}</div><div class="smart-stat__label">Material pendiente</div></div>
+        </div>
+        <div class="smart-header__activity">
+          ${activity.lastUpdate
+            ? `<div class="activity-chip">${icon("clock")}<span>Última actualización <strong>${esc(relativeDays(activity.lastUpdate.dateObj))}</strong> — ${esc(activity.lastUpdate.text)}</span></div>`
+            : `<div class="activity-chip">${icon("clock")}<span>Todavía no hay novedades en la bitácora</span></div>`}
+          ${activity.lastDelivery
+            ? `<div class="activity-chip">${icon("film")}<span>Última entrega: <strong>${esc(formatDateHuman(activity.lastDelivery.dateObj))}</strong></span></div>`
+            : ""}
+          ${activity.nextMeeting
+            ? `<div class="activity-chip">${icon("calendar")}<span>Próxima reunión: <strong>${esc(formatDateHuman(activity.nextMeeting.dateObj))}</strong> — ${esc(activity.nextMeeting.label)}</span></div>`
+            : `<div class="activity-chip">${icon("calendar")}<span>Sin próximas reuniones agendadas</span></div>`}
+        </div>
+      </div>`;
 
     document.title = `${project.name} — Portal ${window.CLIENT_DATA.agency.name}`;
     renderBlocks(project);

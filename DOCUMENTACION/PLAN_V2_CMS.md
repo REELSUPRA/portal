@@ -1,8 +1,9 @@
 # Plan — Portal Cliente V2: Panel de administración integral (CMS + Theme Builder)
 
-Estado: **Fases 1 (Theme Builder) y 2 (editor genérico de listas)
-implementadas** (2026-07-11). Fases 3-4 pendientes — ver registro de
-implementación al final del documento. Este documento analiza el
+Estado: **Fases 1 (Theme Builder), 2 (editor genérico de listas) y 3
+(Header Inteligente, ampliada) implementadas** (2026-07-11). Fase 4
+pendiente — ver registro de implementación al final del documento.
+Este documento analiza el
 pedido de convertir el modo admin en un panel tipo CMS/SaaS —
 identidad visual completa, edición total de contenido sin tocar
 `data.js`, accesos rápidos configurables, sistema de diseño por
@@ -270,3 +271,43 @@ acordado; piezas de contenido sigue con su editor propio).
   editar, reordenar, eliminar, contador actualizado, guardado y
   persistencia tras recargar sin admin — todo sin errores. Regresión
   completa de las 5 vistas también sin errores.
+
+### Fase 3 — Header Inteligente (2026-07-11) — ✅ implementada, alcance ampliado
+
+Ampliada a pedido explícito: no solo accesos rápidos — resumen de
+estado (progreso, etapas completadas, material pendiente) e
+indicadores de actividad (última actualización, última entrega,
+próxima reunión), priorizando valor funcional sobre personalización
+visual (radios/sombras/claro-oscuro quedan en Fase 4, sin tocar).
+
+- **Accesos rápidos:** `project.links` dejó de ser un bloque al final
+  de la página — se integró como pills de color en el encabezado.
+  Esquema (`LIST_SCHEMAS.links`) rediseñado: `type` (8 presets con
+  ícono+color) + `icon`/`color` opcionales que anulan al preset. Se
+  sigue editando con el mismo motor genérico de la Fase 2 — sin
+  cambios en el editor, solo en la forma del dato.
+  `BLOCK_DEFS.links` se mantiene (título/ícono para el editor) pero
+  ya no forma parte de `defaultBlockOrder()` — no se dibuja como card.
+- **Resumen y actividad — decisión de diseño clave: todo derivado, sin
+  campos manuales nuevos.** Etapas completadas cuenta
+  `roadmap.filter(status === "done")`; última actualización/entrega
+  leen la Bitácora; próxima reunión lee el Calendario. Los tres ya son
+  editables desde el editor genérico de la Fase 2 — no hizo falta
+  agregar ninguna UI de edición nueva para el resumen/actividad, se
+  mantienen sincronizados automáticamente porque no existen como datos
+  separados.
+- Progreso general (ya existente) se consolidó dentro del mismo bloque
+  visual (`.smart-header`) en vez de vivir aparte, evitando dos
+  secciones de "estado del proyecto" en el hero.
+- **Migración de datos:** `links[].style`/`links[].icon` (formato de
+  la Fase 4 de UX Premium) se reemplazó por `links[].type` en
+  `data.js` — no había datos de producción reales todavía (siguen
+  siendo placeholders), así que se migró directo sin capa de
+  compatibilidad.
+- Verificado con Chromium headless: pills se renderizan con el color
+  del preset, resumen y actividad muestran los valores correctos
+  derivados de los datos de ejemplo (confirmado "hace 1 día" para la
+  bitácora del 10 de julio con fecha de hoy 11 de julio), el bloque
+  viejo de links ya no aparece en la página, y agregar un acceso nuevo
+  (Instagram) desde el editor genérico se refleja en el header sin
+  recargar. Regresión completa sin errores.

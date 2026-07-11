@@ -30,9 +30,11 @@
  *    completarlas todas.
  *  - agency.adminPassphrase: contraseña simple para entrar al modo
  *    admin. No es seguridad real, solo evita el acceso accidental.
- *  - links[].style ("button" | "card" | "link") + links[].icon:
- *    cómo se presenta cada acceso rápido. Sin style, es un enlace
- *    simple (comportamiento de siempre).
+ *  - links[]: accesos rápidos del Header Inteligente (no un bloque
+ *    aparte). Cada uno tiene label/url/type (whatsapp, drive,
+ *    instagram, youtube, facebook, tiktok, calendar, custom — define
+ *    ícono y color por defecto) + icon/color opcionales que anulan
+ *    los del tipo. Ver QUICKLINK_TYPES en js/render.js.
  * ============================================================
  */
 
@@ -46,7 +48,6 @@ function defaultBlockOrder() {
     { id: "calendar", visible: true },
     { id: "resources", visible: true },
     { id: "documents", visible: true },
-    { id: "links", visible: true },
     { id: "nextSteps", visible: true },
     { id: "pendingMaterial", visible: true },
     { id: "bitacora", visible: true },
@@ -172,12 +173,13 @@ window.CLIENT_DATA = {
         { label: "Brief de marca — JGA Realtor", url: "#" },
       ],
 
-      // style: "button" | "card" | "link" (default) — define cómo se
-      // presenta cada acceso. icon: nombre de ícono lucide (opcional).
+      // Accesos rápidos del Header Inteligente. type define ícono y
+      // color por defecto (ver QUICKLINK_TYPES en js/render.js);
+      // icon/color acá son opcionales y anulan al del tipo.
       links: [
-        { label: "Carpeta de material en bruto", url: "#", style: "button", icon: "folder" },
-        { label: "Calendario editorial compartido", url: "#", style: "card", icon: "calendar-days" },
-        { label: "Escribir por WhatsApp", url: "#", icon: "message-circle" },
+        { label: "Carpeta de material en bruto", url: "#", type: "drive" },
+        { label: "Calendario editorial compartido", url: "#", type: "calendar" },
+        { label: "Escribir por WhatsApp", url: "#", type: "whatsapp" },
       ],
 
       // Solo reuniones u otros eventos manuales. Las publicaciones
@@ -294,9 +296,9 @@ window.CLIENT_DATA = {
       ],
 
       links: [
-        { label: "Carpeta de material en bruto", url: "#", style: "button", icon: "folder" },
-        { label: "Calendario editorial compartido", url: "#", style: "card", icon: "calendar-days" },
-        { label: "Escribir por WhatsApp", url: "#", icon: "message-circle" },
+        { label: "Carpeta de material en bruto", url: "#", type: "drive" },
+        { label: "Calendario editorial compartido", url: "#", type: "calendar" },
+        { label: "Escribir por WhatsApp", url: "#", type: "whatsapp" },
       ],
 
       calendar: [
