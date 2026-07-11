@@ -246,6 +246,42 @@ const RS = (() => {
       ${upcomingList}`;
   }
 
+  // ----- Bitácora -----
+
+  function blockBitacora(project) {
+    const entries = (project.bitacora || [])
+      .map((e) => ({ ...e, dateObj: parseISODate(e.date) }))
+      .filter((e) => e.dateObj)
+      .sort((a, b) => b.dateObj - a.dateObj);
+
+    if (!entries.length) return `<p class="empty-hint">Todavía no hay novedades registradas.</p>`;
+
+    return `<ul class="upcoming-list">${entries.map((e) => `
+      <li>
+        <span class="calendar-date calendar-date--sm">${e.dateObj.getDate()}</span>
+        <div class="upcoming-list__info">
+          <div class="upcoming-list__title">${esc(e.text)}</div>
+          <span class="upcoming-list__note">${formatDateHuman(e.dateObj)}</span>
+        </div>
+      </li>`).join("")}</ul>`;
+  }
+
+  // ----- Mejoras disponibles (Upsells) -----
+
+  function blockUpsells(project) {
+    const items = project.upsells || [];
+    if (!items.length) return `<p class="empty-hint">No hay mejoras sugeridas por el momento.</p>`;
+
+    return `<ul class="upsell-list">${items.map((u) => `
+      <li class="upsell-item">
+        <div class="upsell-item__info">
+          <div class="upsell-item__title">${icon("sparkles")}${esc(u.title)}</div>
+          <p class="upsell-item__desc">${esc(u.description)}</p>
+        </div>
+        ${u.ctaUrl ? `<a class="btn btn--ghost btn--sm" href="${esc(u.ctaUrl)}" target="_blank" rel="noopener">${esc(u.ctaLabel || "Consultar")}</a>` : ""}
+      </li>`).join("")}</ul>`;
+  }
+
   // ----- Calendario -----
 
   function getCalendarEvents(project) {
@@ -334,6 +370,8 @@ const RS = (() => {
     resources: { title: "Recursos", icon: "bookmark", render: blockResources },
     documents: { title: "Documentos", icon: "file-text", render: blockDocuments },
     links: { title: "Links importantes", icon: "link", render: blockLinks },
+    bitacora: { title: "Bitácora", icon: "notebook-pen", render: blockBitacora },
+    upsells: { title: "Mejoras disponibles", icon: "sparkles", render: blockUpsells },
   };
 
   /* ----------------------------------------------------------

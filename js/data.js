@@ -16,6 +16,10 @@
  *  - blocks: el orden (y visibilidad) de los módulos de la
  *    página de este proyecto. Se reordena arrastrando en modo
  *    administrador; cada proyecto guarda su propio orden.
+ *  - bitacora: registro cronológico de novedades del proyecto,
+ *    visible para el cliente (más reciente primero).
+ *  - upsells: mejoras / servicios adicionales que se le ofrecen
+ *    al cliente, con un link de contacto (no es checkout).
  * ============================================================
  */
 
@@ -27,11 +31,13 @@ function defaultBlockOrder() {
     { id: "roadmap", visible: true },
     { id: "contentPieces", visible: true },
     { id: "calendar", visible: true },
-    { id: "nextSteps", visible: true },
-    { id: "pendingMaterial", visible: true },
     { id: "resources", visible: true },
     { id: "documents", visible: true },
     { id: "links", visible: true },
+    { id: "nextSteps", visible: true },
+    { id: "pendingMaterial", visible: true },
+    { id: "bitacora", visible: true },
+    { id: "upsells", visible: true },
   ];
 }
 
@@ -152,6 +158,26 @@ window.CLIENT_DATA = {
         { date: "2026-07-15", label: "Revisión mensual de resultados" },
       ],
 
+      bitacora: [
+        { date: "2026-07-08", text: "Primer video del mes entregado y listo para publicar." },
+        { date: "2026-07-04", text: "Arranca producción con material grabado antes del viaje de Juan." },
+      ],
+
+      upsells: [
+        {
+          title: "Landing page para captación de leads",
+          description: "Página dedicada para convertir las visitas de los videos en consultas calificadas.",
+          ctaLabel: "Consultar",
+          ctaUrl: "#",
+        },
+        {
+          title: "Automatización de respuesta por WhatsApp",
+          description: "Respuesta inmediata a quienes consultan por Instagram o WhatsApp fuera de horario.",
+          ctaLabel: "Consultar",
+          ctaUrl: "#",
+        },
+      ],
+
       blocks: defaultBlockOrder(),
     },
 
@@ -243,6 +269,20 @@ window.CLIENT_DATA = {
         { date: "2026-07-04", label: "Inicio de viaje de Juan" },
         { date: "2026-07-11", label: "Regreso de Juan" },
         { date: "2026-07-15", label: "Revisión mensual de resultados" },
+      ],
+
+      bitacora: [
+        { date: "2026-07-09", text: "Primer before & after entregado, con subtítulos en inglés." },
+        { date: "2026-07-04", text: "Arranca producción con material grabado antes del viaje de Juan." },
+      ],
+
+      upsells: [
+        {
+          title: "Clonación de voz en inglés (IA)",
+          description: "Narración automática en inglés con la voz de Juan, si la calidad resulta profesional.",
+          ctaLabel: "Consultar",
+          ctaUrl: "#",
+        },
       ],
 
       blocks: defaultBlockOrder(),
