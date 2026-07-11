@@ -53,6 +53,11 @@ window.CLIENT_DATA = {
 }
 ```
 
+`client.coverImage` (portada del hero) y `client.primaryColor` (acento
+de marca) siguen el mismo patrón que `logoUrl`: URL o base64 subido
+desde el admin. `agency.adminPassphrase` es el gate simple del modo
+admin (ver sección "Modo administrador" abajo).
+
 Un proyecto = un objeto. Un cliente = varios proyectos. **Un deployment
 sirve a un cliente** (ver sección "Modelo de despliegue" abajo).
 
@@ -77,14 +82,21 @@ layout, drag&drop o visibilidad, que ya está resuelta a nivel genérico.
 ## Modo administrador (`js/admin.js`)
 
 - Se activa con `?admin=true`, ruta `/admin` (via `_redirects`), o
-  `Ctrl/Cmd+Shift+A`.
+  `Ctrl/Cmd+Shift+A` — pidiendo antes `agency.adminPassphrase` vía
+  `window.prompt()` (una vez por sesión de navegador,
+  `sessionStorage.rsAdminAuthed`). **No es autenticación real**: la
+  contraseña vive en un archivo JS público: no protege contra un
+  acceso intencional, solo evita el accidental. Ver
+  [DECISIONES.md](DECISIONES.md).
 - Estado en `window.RS_ADMIN_MODE`, persistido solo en
-  `sessionStorage` (no hay backend, no hay usuarios, no hay login).
+  `sessionStorage` (no hay backend, no hay usuarios, no hay login real).
 - Todo lo editable en modo admin vive **en memoria del navegador**
   durante la sesión. Para persistir cambios: "Exportar JSON" y
   reemplazar manualmente el objeto en `js/data.js`.
 - Cubre hoy: reordenar/ocultar bloques (drag&drop), editar piezas de
-  contenido (modal), cambiar logo (upload o URL), editar textos básicos
+  contenido (modal), cambiar logo de proyecto y portada de cliente
+  (modal de imagen genérico, `openImageModal`, upload o URL), color de
+  marca (`primaryColor`, con preview en vivo), editar textos básicos
   (nombre cliente, mensaje de bienvenida, aviso, nombre/estado/objetivo
   de cada proyecto) desde un panel lateral.
 - **No cubre** edición de listas (goals, roadmap, nextSteps,

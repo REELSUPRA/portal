@@ -85,3 +85,40 @@ mostrarlo/ocultarlo sin tocar `data.js`).
 la opción B descartada acá — rediseñar `CLIENT_DATA` como lista de
 clientes, agregar ruteo (`?client=X&project=Y`) y un listado/selector en
 el admin. No se construye hasta que haya una razón concreta.
+
+---
+
+## 2026-07-11 — Gate de contraseña para el admin (no autenticación real)
+
+**Contexto:** el plan de UX Premium pedía separar admin/cliente. Full
+login con credenciales por rol es multi-tenant real — fuera de alcance
+de esta V1 (ver arriba). Se necesitaba algo intermedio para "evitar que
+un cliente entre por accidente".
+
+**Decisión:** un gate liviano — `agency.adminPassphrase` en
+`data.js`, verificado con `window.prompt()` antes de activar
+`RS_ADMIN_MODE`, una vez por sesión de navegador
+(`sessionStorage.rsAdminAuthed`).
+
+**Por qué:** cero infraestructura nueva, cero dependencias. Resuelve el
+problema real planteado (acceso accidental) sin simular una seguridad
+que no existe — la contraseña vive en un archivo JS servido a
+cualquiera, así que **no protege contra un acceso intencional**. Esto
+se documenta explícitamente en el código y se comunica al cliente para
+no generar una falsa sensación de seguridad.
+
+**Pendiente si se necesita seguridad real:** login con backend/
+identidad real — eso sí es un cambio de arquitectura, no se hace en la
+V1.
+
+---
+
+## 2026-07-11 — Persistencia del orden de bloques: localStorage (confirmado)
+
+**Contexto:** el orden/visibilidad de módulos por proyecto solo vivía
+en memoria — se perdía al recargar.
+
+**Decisión:** confirmado usar `localStorage` (por navegador, sin
+backend) — no se implementa todavía (queda para la Fase 5 del plan UX
+Premium), pero la decisión de *cómo* resolverlo está tomada: no se
+introduce backend/base de datos para esto en la V1.

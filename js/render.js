@@ -40,6 +40,29 @@ const RS = (() => {
     return project.statusTone || "active";
   }
 
+  function hexToRgba(hex, alpha) {
+    const clean = String(hex).replace("#", "");
+    const full = clean.length === 3 ? clean.split("").map((c) => c + c).join("") : clean;
+    const num = parseInt(full, 16);
+    if (Number.isNaN(num)) return null;
+    const r = (num >> 16) & 255;
+    const g = (num >> 8) & 255;
+    const b = num & 255;
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+
+  // Aplica el color de marca del cliente a las variables CSS que ya
+  // maneja todo el sistema de diseño — no crea un sistema de theming
+  // nuevo, solo pisa la variable existente en runtime.
+  function applyTheme() {
+    const color = window.CLIENT_DATA && window.CLIENT_DATA.client && window.CLIENT_DATA.client.primaryColor;
+    if (!color) return;
+    const dim = hexToRgba(color, 0.09);
+    const root = document.documentElement.style;
+    root.setProperty("--rs-red", color);
+    if (dim) root.setProperty("--rs-red-dim", dim);
+  }
+
   function parseISODate(str) {
     if (!str) return null;
     const [y, m, d] = str.split("-").map(Number);
@@ -102,7 +125,19 @@ const RS = (() => {
     const data = window.CLIENT_DATA;
     const el = document.getElementById("hero");
     if (!el) return;
+
+    const coverEditBtn = isAdmin()
+      ? `<button class="btn btn--ghost btn--sm cover-edit-btn" id="editCoverBtn">${icon("image-plus")} Portada</button>`
+      : "";
+
+    const cover = data.client.coverImage
+      ? `<div class="hero__cover"><img src="${esc(data.client.coverImage)}" alt="" />${coverEditBtn}</div>`
+      : isAdmin()
+        ? `<div class="hero__cover hero__cover--empty">${coverEditBtn}</div>`
+        : "";
+
     el.innerHTML = `
+      ${cover}
       <div class="hero__eyebrow">Portal del cliente</div>
       <h1 class="hero__title">Bienvenido, ${esc(data.client.name)} ${data.client.greetingEmoji || ""}</h1>
       <p class="hero__message">${esc(data.client.welcomeMessage)}</p>`;
@@ -452,7 +487,7 @@ const RS = (() => {
   }
 
   return {
-    esc, icon, isAdmin,
+    esc, icon, isAdmin, applyTheme,
     renderTopbar, renderAnnouncement, renderHero, renderProjectGrid,
     renderProjectDetail, renderBlocks, navigateCalendar,
     getProjectFromURL, hydrateIcons, projectAvatar,

@@ -3,6 +3,26 @@
 Registro cronológico de cambios, más granular que
 [VERSIONES.md](VERSIONES.md). Orden: más reciente arriba.
 
+## 2026-07-11 (UX Premium — Fase 1)
+
+- **Feature:** color de marca por cliente (`client.primaryColor`) vía
+  `RS.applyTheme()` — pisa las variables CSS existentes en runtime, sin
+  nuevo sistema de theming. Preview en vivo desde el panel admin.
+- **Feature:** portada del cliente (`client.coverImage`) en el hero del
+  índice, con placeholder de admin cuando no hay imagen.
+- **Refactor:** modal de logo generalizado a `openImageModal(config)`
+  reutilizable — ahora sirve tanto para el logo de proyecto como para
+  la portada del cliente, sin duplicar código.
+- **Feature:** gate simple de contraseña para el modo admin
+  (`agency.adminPassphrase`, `verifyPassphrase`/`tryActivateAdmin` en
+  `js/admin.js`) — evita el acceso accidental, no es seguridad real
+  (documentado explícitamente).
+- Ver detalle completo en
+  [PLAN_UX_PREMIUM.md](PLAN_UX_PREMIUM.md#fase-1--personalización-premium-2026-07-11--✅-implementada).
+- Verificado con Chromium headless (passphrase correcta/incorrecta,
+  color en vivo, upload de portada, regresión de logo de proyecto):
+  sin errores de consola.
+
 ## 2026-07-11 (deployment)
 
 - Repo conectado a `https://github.com/REELSUPRA/portal` (rama `main`,

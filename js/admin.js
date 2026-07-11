@@ -12,6 +12,11 @@
  *   - ?admin=true en la URL
  *   - /admin en la ruta (Netlify redirige /admin -> index.html)
  *   - Ctrl/Cmd + Shift + A en cualquier momento
+ * ...pidiendo antes una contraseña simple (agency.adminPassphrase en
+ * data.js). Esto NO es autenticación real — vive en un archivo JS
+ * público, cualquiera con conocimientos técnicos puede leerla. Su
+ * único objetivo es evitar que un cliente entre por accidente al
+ * modo admin, no proteger contra un acceso intencional.
  *
  * En modo administrador, sobre la página de un proyecto, además:
  *   - Los bloques (Objetivos, Roadmap, Calendario, etc.) se
@@ -28,35 +33,60 @@
 
 (function () {
 
-  let panelEl, overlayEl, toastEl, pieceModalEl, logoModalEl;
+  let panelEl, overlayEl, toastEl, pieceModalEl, imageModalEl;
   let isBuilt = false;
   let draggedBlockId = null;
+  let imageModalConfig = null;
 
   /* ---------------------------------------------------------- */
   /* Estado del modo admin (persistido solo en esta sesión)     */
   /* ---------------------------------------------------------- */
 
-  function readAdminModeFlag() {
+  function wantsAdminViaUrl() {
     const params = new URLSearchParams(window.location.search);
     if (params.get("admin") === "true") return true;
     if (window.location.pathname.replace(/\/$/, "").endsWith("/admin")) return true;
-    return sessionStorage.getItem("rsAdminMode") === "true";
+    return false;
+  }
+
+  function isAuthed() {
+    return sessionStorage.getItem("rsAdminAuthed") === "true";
   }
 
   function setAdminMode(value) {
     window.RS_ADMIN_MODE = value;
-    sessionStorage.setItem("rsAdminMode", value ? "true" : "false");
+    sessionStorage.setItem("rsAdminAuthed", value ? "true" : "false");
+  }
+
+  // Gate simple: no es seguridad real, evita el acceso accidental.
+  // Si el cliente ya se autenticó en esta sesión de navegador, no
+  // vuelve a preguntar.
+  function verifyPassphrase() {
+    const expected = (window.CLIENT_DATA.agency && window.CLIENT_DATA.agency.adminPassphrase) || "";
+    if (!expected) return true;
+    const attempt = window.prompt("Contraseña de administrador:");
+    if (attempt === expected) return true;
+    if (attempt !== null) showToast("Contraseña incorrecta");
+    return false;
+  }
+
+  function tryActivateAdmin() {
+    if (isAuthed()) { setAdminMode(true); return true; }
+    if (verifyPassphrase()) { setAdminMode(true); return true; }
+    return false;
   }
 
   function toggleAdminMode() {
-    setAdminMode(!window.RS_ADMIN_MODE);
-    refreshPage();
     if (window.RS_ADMIN_MODE) {
-      showToast("Modo administrador activado");
-      if (document.getElementById("blocksContainer")) initBlockDragDrop();
-    } else {
+      setAdminMode(false);
+      refreshPage();
       showToast("Modo administrador desactivado");
+      return;
     }
+    if (!tryActivateAdmin()) return;
+    refreshPage();
+    showToast("Modo administrador activado");
+    if (document.getElementById("blocksContainer")) initBlockDragDrop();
   }
 
   function refreshPage() {
@@ -159,6 +189,10 @@
     body.appendChild(groupTitle("Cliente"));
     body.appendChild(field("Nombre del cliente", data.client.name, (v) => (data.client.name = v)));
     body.appendChild(field("Mensaje de bienvenida", data.client.welcomeMessage, (v) => (data.client.welcomeMessage = v), true));
+    body.appendChild(field("Color principal del portal", data.client.primaryColor || "#e02020", (v) => {
+      data.client.primaryColor = v;
+      RS.applyTheme();
+    }, false, "color"));
 
     body.appendChild(groupTitle("Aviso superior"));
     body.appendChild(checkboxField("Mostrar aviso al cliente", data.announcement.active, (v) => (data.announcement.active = v)));
@@ -365,73 +399,97 @@
   }
 
   /* ---------------------------------------------------------- */
-  /* Logo del proyecto                                            */
+  /* Modal genérico de imagen (logo de proyecto, portada de cliente) */
   /* ---------------------------------------------------------- */
 
-  function ensureLogoModal() {
-    if (logoModalEl) return;
-    logoModalEl = document.createElement("div");
-    logoModalEl.className = "piece-modal-overlay";
-    logoModalEl.innerHTML = `<div class="piece-modal">
+  function ensureImageModal() {
+    if (imageModalEl) return;
+    imageModalEl = document.createElement("div");
+    imageModalEl.className = "piece-modal-overlay";
+    imageModalEl.innerHTML = `<div class="piece-modal">
       <div class="admin-panel__header">
-        <div class="admin-panel__title">${RS.icon("image-plus")} Logo del proyecto</div>
-        <button class="admin-panel__close" id="logoModalClose">${RS.icon("x")}</button>
+        <div class="admin-panel__title" id="imageModalTitle"></div>
+        <button class="admin-panel__close" id="imageModalClose">${RS.icon("x")}</button>
       </div>
       <div class="admin-panel__body">
         <div class="admin-field">
-          <label>Subir imagen (PNG o JPG, ideal cuadrada)</label>
-          <input type="file" id="logoFileInput" accept="image/*" />
+          <label>Subir imagen</label>
+          <input type="file" id="imageFileInput" accept="image/*" />
         </div>
         <div class="admin-field">
           <label>O pegar una URL de imagen</label>
-          <input type="text" id="logoUrlInput" placeholder="https://..." />
+          <input type="text" id="imageUrlInput" placeholder="https://..." />
         </div>
-        <button class="btn btn--ghost" id="logoRemoveBtn" style="width:100%; justify-content:center;">${RS.icon("trash-2")} Quitar logo (volver al emoji)</button>
+        <button class="btn btn--ghost" id="imageRemoveBtn" style="width:100%; justify-content:center;">${RS.icon("trash-2")} Quitar imagen</button>
       </div>
     </div>`;
-    document.body.appendChild(logoModalEl);
-    logoModalEl.addEventListener("click", (e) => { if (e.target === logoModalEl) closeLogoModal(); });
-    logoModalEl.querySelector("#logoModalClose").addEventListener("click", closeLogoModal);
+    document.body.appendChild(imageModalEl);
+    imageModalEl.addEventListener("click", (e) => { if (e.target === imageModalEl) closeImageModal(); });
+    imageModalEl.querySelector("#imageModalClose").addEventListener("click", closeImageModal);
+  }
 
-    logoModalEl.querySelector("#logoFileInput").addEventListener("change", (e) => {
+  // config: { title, icon, get, set, onSaved, removedMessage }
+  function openImageModal(config) {
+    ensureImageModal();
+    imageModalConfig = config;
+    imageModalEl.querySelector("#imageModalTitle").innerHTML = `${RS.icon(config.icon || "image-plus")} ${config.title}`;
+
+    const fileInput = imageModalEl.querySelector("#imageFileInput");
+    const urlInput = imageModalEl.querySelector("#imageUrlInput");
+    fileInput.value = "";
+    urlInput.value = "";
+
+    fileInput.onchange = (e) => {
       const file = e.target.files[0];
       if (!file) return;
       const reader = new FileReader();
       reader.onload = () => {
-        currentProject().logoUrl = reader.result;
-        RS.renderProjectDetail();
-        RS.hydrateIcons();
-        closeLogoModal();
-        showToast("Logo actualizado");
+        imageModalConfig.set(reader.result);
+        imageModalConfig.onSaved();
+        closeImageModal();
+        showToast("Imagen actualizada");
       };
       reader.readAsDataURL(file);
-    });
+    };
 
-    logoModalEl.querySelector("#logoUrlInput").addEventListener("change", (e) => {
+    urlInput.onchange = (e) => {
       if (!e.target.value) return;
-      currentProject().logoUrl = e.target.value;
-      RS.renderProjectDetail();
-      RS.hydrateIcons();
-      closeLogoModal();
-      showToast("Logo actualizado");
-    });
+      imageModalConfig.set(e.target.value);
+      imageModalConfig.onSaved();
+      closeImageModal();
+      showToast("Imagen actualizada");
+    };
 
-    logoModalEl.querySelector("#logoRemoveBtn").addEventListener("click", () => {
-      currentProject().logoUrl = null;
-      RS.renderProjectDetail();
-      RS.hydrateIcons();
-      closeLogoModal();
-      showToast("Logo quitado, volviendo al emoji");
-    });
+    imageModalEl.querySelector("#imageRemoveBtn").onclick = () => {
+      imageModalConfig.set(null);
+      imageModalConfig.onSaved();
+      closeImageModal();
+      showToast(imageModalConfig.removedMessage || "Imagen quitada");
+    };
+
+    imageModalEl.classList.add("is-open");
+  }
+
+  function closeImageModal() {
+    if (imageModalEl) imageModalEl.classList.remove("is-open");
   }
 
   function openLogoModal() {
-    ensureLogoModal();
-    logoModalEl.classList.add("is-open");
+    openImageModal({
+      title: "Logo del proyecto",
+      set: (v) => { currentProject().logoUrl = v; },
+      onSaved: () => { RS.renderProjectDetail(); RS.hydrateIcons(); },
+      removedMessage: "Logo quitado, volviendo al emoji",
+    });
   }
 
-  function closeLogoModal() {
-    if (logoModalEl) logoModalEl.classList.remove("is-open");
+  function openCoverModal() {
+    openImageModal({
+      title: "Portada del cliente",
+      set: (v) => { window.CLIENT_DATA.client.coverImage = v; },
+      onSaved: () => { RS.renderHero(); RS.hydrateIcons(); },
+      removedMessage: "Portada quitada",
+    });
   }
 
   /* ---------------------------------------------------------- */
@@ -444,6 +502,11 @@
       logoBtn.dataset.bound = "true";
       logoBtn.addEventListener("click", openLogoModal);
     }
+    const coverBtn = document.getElementById("editCoverBtn");
+    if (coverBtn && !coverBtn.dataset.bound) {
+      coverBtn.dataset.bound = "true";
+      coverBtn.addEventListener("click", openCoverModal);
+    }
   }
 
   /* ---------------------------------------------------------- */
@@ -451,7 +514,9 @@
   /* ---------------------------------------------------------- */
 
   function init() {
-    setAdminMode(readAdminModeFlag());
+    // El estado de RS_ADMIN_MODE ya lo resolvió detectAdminMode() al
+    // principio del boot() de la página (incluye el gate de contraseña
+    // si corresponde) — no se vuelve a pedir acá.
 
     // Delegado sobre #topbar (que nunca se reemplaza) en lugar del botón
     // en sí (que se recrea cada vez que se vuelve a dibujar el topbar).
@@ -460,7 +525,7 @@
       topbarEl.dataset.adminBound = "true";
       topbarEl.addEventListener("click", (e) => {
         if (!e.target.closest("#adminToggle")) return;
-        if (!window.RS_ADMIN_MODE) { toggleAdminMode(); openPanel(); }
+        if (!window.RS_ADMIN_MODE) { toggleAdminMode(); if (window.RS_ADMIN_MODE) openPanel(); }
         else { openPanel(); }
       });
     }
@@ -469,20 +534,22 @@
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "a") {
         e.preventDefault();
         if (!window.RS_ADMIN_MODE) toggleAdminMode();
-        openPanel();
+        if (window.RS_ADMIN_MODE) openPanel();
       }
-      if (e.key === "Escape") { closePanel(); closePieceModal(); closeLogoModal(); }
+      if (e.key === "Escape") { closePanel(); closePieceModal(); closeImageModal(); }
     });
 
     if (document.getElementById("blocksContainer")) initBlockDragDrop();
     bindProjectPageEvents();
 
     if (window.RS_ADMIN_MODE) refreshPage();
-    if (readAdminModeFlag() && new URLSearchParams(window.location.search).get("admin") === "true") openPanel();
+    if (wantsAdminViaUrl() && window.RS_ADMIN_MODE) openPanel();
   }
 
   function detectAdminMode() {
-    setAdminMode(readAdminModeFlag());
+    if (isAuthed()) { setAdminMode(true); return; }
+    if (wantsAdminViaUrl()) { tryActivateAdmin(); return; }
+    setAdminMode(false);
   }
 
   window.RSAdmin = { init, toggleAdminMode, detectAdminMode };

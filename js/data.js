@@ -20,6 +20,11 @@
  *    visible para el cliente (más reciente primero).
  *  - upsells: mejoras / servicios adicionales que se le ofrecen
  *    al cliente, con un link de contacto (no es checkout).
+ *  - client.coverImage / client.primaryColor: personalización de
+ *    marca del portal (portada del hero y color de acento). Se
+ *    editan desde el panel admin, igual que logoUrl.
+ *  - agency.adminPassphrase: contraseña simple para entrar al modo
+ *    admin. No es seguridad real, solo evita el acceso accidental.
  * ============================================================
  */
 
@@ -46,11 +51,17 @@ window.CLIENT_DATA = {
   agency: {
     name: "ReelSupra",
     tagline: "Sistemas de contenido para marcas que escalan",
+    // Gate simple del modo admin — NO es seguridad real (vive en un
+    // archivo JS público). Solo evita el acceso accidental. Cambiarla
+    // cuando quieras, no requiere tocar nada más.
+    adminPassphrase: "reelsupra2026",
   },
 
   client: {
     name: "Juan Guzmán",
     greetingEmoji: "⚡",
+    coverImage: null, // URL o imagen subida desde el panel admin (portada del hero)
+    primaryColor: "#e02020", // color de marca del cliente — cambia el acento de todo el portal
     welcomeMessage:
       "Este es tu portal ReelSupra. Acá vas a encontrar el estado de cada proyecto, " +
       "qué sigue, y todo el material y los recursos que necesitás tener a mano — " +

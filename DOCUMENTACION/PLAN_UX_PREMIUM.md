@@ -1,6 +1,7 @@
 # Plan — Experiencia Premium del Portal del Cliente
 
-Estado: **propuesta, no implementada**. Este documento responde al pedido
+Estado: **Fase 1 implementada** (2026-07-11). Fases 2-4 pendientes. Este
+documento responde al pedido
 de mejora visual/UX profunda sin cambiar la arquitectura de base. Se
 actualiza a "implementado" ítem por ítem en [CHANGELOG.md](CHANGELOG.md)
 a medida que se construye, no acá.
@@ -246,3 +247,42 @@ Mi recomendación por defecto (si no me decís lo contrario, avanzo así):
 `localStorage` para el punto 1, y sí implementar el gate simple del
 punto 2 — es barato y mejora mucho la sensación de "esto es serio" sin
 tocar arquitectura.
+
+**Decisiones confirmadas (2026-07-11):** `localStorage` para el orden
+de bloques (queda en Fase 5, no incluido en Fase 1), y sí — gate simple
+de passphrase para el admin. Implementado en Fase 1.
+
+---
+
+## Registro de implementación
+
+### Fase 1 — Personalización premium (2026-07-11) — ✅ implementada
+
+- `client.coverImage` + `client.primaryColor` + `agency.adminPassphrase`
+  agregados a `js/data.js`.
+- `RS.applyTheme()` (`js/render.js`): pisa `--rs-red` y `--rs-red-dim`
+  en runtime desde `client.primaryColor`. Llamado en el `boot()` de
+  `index.html` y `project.html`, antes de cualquier render.
+- `renderHero()` ahora dibuja `.hero__cover` (banner de portada, 200px,
+  bordes redondeados) cuando hay `coverImage`; en modo admin sin
+  imagen muestra un placeholder punteado con botón "Portada".
+- Modal de logo (`ensureLogoModal`/`openLogoModal`) generalizado a un
+  modal de imagen reutilizable (`openImageModal(config)`) — ahora lo
+  usan tanto el logo de proyecto como la portada del cliente, mismo
+  código, sin duplicación.
+- Panel admin: nuevo campo de color (`type: "color"`) para
+  `primaryColor`, con preview en vivo (aplica `RS.applyTheme()` al
+  tipear, no hace falta "Aplicar cambios").
+- **Gate de admin:** `verifyPassphrase()` + `tryActivateAdmin()` en
+  `js/admin.js`. Se pide una sola vez por sesión de navegador
+  (`sessionStorage.rsAdminAuthed`); si la contraseña es incorrecta o se
+  cancela, el modo admin no se activa. Explícitamente documentado como
+  disuasivo, no como seguridad real (la contraseña vive en un archivo
+  JS público).
+- Verificado con Chromium headless: contraseña incorrecta bloquea,
+  correcta activa, color se aplica en vivo, portada se sube por URL,
+  logo de proyecto (regresión) sigue funcionando. Sin errores de
+  consola en ningún caso.
+- Logos reales de los proyectos de Juan: **pendiente** — es un dato,
+  no código; se sube desde el botón que ya existe sobre el logo/emoji
+  de cada proyecto en modo admin.
