@@ -533,6 +533,79 @@ const RS = (() => {
     upsells: { title: "Mejoras disponibles", icon: "sparkles", render: blockUpsells },
   };
 
+  // Editor genérico de listas — esquema declarativo por tipo de dato.
+  // admin.js lee esto (más título/ícono de BLOCK_DEFS, sin duplicarlos)
+  // para generar un único editor CRUD reutilizado por los 8 bloques de
+  // lista. Agregar un bloque de lista nuevo en el futuro = una entrada
+  // acá (+ una en BLOCK_DEFS para el render de solo lectura) — no hace
+  // falta escribir un editor nuevo.
+  const LIST_SCHEMAS = {
+    roadmap: {
+      fields: [
+        { key: "phase", label: "Fase", type: "text" },
+        { key: "detail", label: "Detalle", type: "textarea" },
+        { key: "status", label: "Estado", type: "select", options: ["in-progress", "upcoming", "done"] },
+      ],
+      newItem: () => ({ phase: "", detail: "", status: "upcoming" }),
+      itemLabel: (item) => item.phase || "Nueva fase",
+    },
+    bitacora: {
+      fields: [
+        { key: "date", label: "Fecha", type: "date" },
+        { key: "type", label: "Tipo", type: "select", options: ["milestone", "delivery", "material", "note"] },
+        { key: "text", label: "Texto", type: "text" },
+      ],
+      newItem: () => ({ date: "", type: "note", text: "" }),
+      itemLabel: (item) => item.text || "Nueva novedad",
+    },
+    calendar: {
+      fields: [
+        { key: "date", label: "Fecha", type: "date" },
+        { key: "label", label: "Descripción", type: "text" },
+      ],
+      newItem: () => ({ date: "", label: "" }),
+      itemLabel: (item) => item.label || "Nuevo evento",
+    },
+    resources: {
+      fields: [
+        { key: "label", label: "Nombre", type: "text" },
+        { key: "url", label: "URL", type: "text" },
+      ],
+      newItem: () => ({ label: "", url: "" }),
+      itemLabel: (item) => item.label || "Nuevo recurso",
+    },
+    documents: {
+      fields: [
+        { key: "label", label: "Nombre", type: "text" },
+        { key: "url", label: "URL", type: "text" },
+      ],
+      newItem: () => ({ label: "", url: "" }),
+      itemLabel: (item) => item.label || "Nuevo documento",
+    },
+    pendingMaterial: {
+      primitive: true,
+      fields: [{ key: "value", label: "Descripción", type: "text" }],
+      newItem: () => "",
+      itemLabel: (item) => item || "Sin descripción",
+    },
+    nextSteps: {
+      primitive: true,
+      fields: [{ key: "value", label: "Descripción", type: "text" }],
+      newItem: () => "",
+      itemLabel: (item) => item || "Sin descripción",
+    },
+    upsells: {
+      fields: [
+        { key: "title", label: "Título", type: "text" },
+        { key: "description", label: "Descripción", type: "textarea" },
+        { key: "ctaLabel", label: "Texto del botón", type: "text" },
+        { key: "ctaUrl", label: "Link", type: "text" },
+      ],
+      newItem: () => ({ title: "", description: "", ctaLabel: "Consultar", ctaUrl: "" }),
+      itemLabel: (item) => item.title || "Nueva mejora",
+    },
+  };
+
   /* ----------------------------------------------------------
      PROJECT DETAIL PAGE
      ---------------------------------------------------------- */
@@ -620,6 +693,6 @@ const RS = (() => {
     renderTopbar, renderAnnouncement, renderHero, renderProjectGrid,
     renderProjectDetail, renderBlocks, navigateCalendar,
     getProjectFromURL, hydrateIcons, projectAvatar,
-    BLOCK_DEFS, STATUS_LABEL, THEME_SCHEMA,
+    BLOCK_DEFS, STATUS_LABEL, THEME_SCHEMA, LIST_SCHEMAS,
   };
 })();

@@ -113,6 +113,51 @@ const THEME_SCHEMA = [
   directamente sobre `--rs-gray-500`/`--rs-gray-100`, que ya eran la
   fuente única usada en toda la hoja de estilos.
 
+## Editor genérico de listas (`RS.LIST_SCHEMAS` en `js/render.js`)
+
+Mismo espíritu que `BLOCK_DEFS`/`THEME_SCHEMA`: un esquema declarativo
+por tipo de lista, un solo motor de edición en `admin.js` que lo lee.
+
+```
+const LIST_SCHEMAS = {
+  roadmap: { fields: [...], newItem: () => ({...}), itemLabel: (item) => ... },
+  bitacora: { ... },
+  calendar: { ... },
+  resources: { ... },
+  documents: { ... },
+  pendingMaterial: { primitive: true, fields: [...], ... },  // lista de strings, no objetos
+  nextSteps: { primitive: true, ... },
+  upsells: { ... },
+};
+```
+
+- **Título e ícono no se duplican**: el editor los lee de
+  `RS.BLOCK_DEFS[listKey]` (ya existente para el render de solo
+  lectura) en vez de repetirlos en `LIST_SCHEMAS`.
+- **Un solo modal** (`admin.js`: `openListEditor(project, listKey)`)
+  sirve a las 8 listas. Tiene dos vistas internas: lista (reordenar con
+  flechas ↑↓, editar, eliminar, agregar) y formulario (generado campo
+  por campo desde `schema.fields`, reutilizando `field()`/
+  `selectField()` — los mismos helpers del Theme Builder).
+- **`primitive: true`** marca las listas que son arrays de strings
+  (Material pendiente, Próximos pasos) en vez de arrays de objetos —
+  el formulario les muestra un solo campo de texto y el commit
+  reemplaza el string completo, sin necesidad de una rama de código
+  aparte en el motor.
+- **Botón de acceso por lista**: en el panel lateral, cada proyecto
+  muestra una grilla de botones (uno por entrada de `LIST_SCHEMAS`,
+  con conteo de elementos) que abre el editor para esa lista y ese
+  proyecto — `buildContentListButtons()`.
+- **Agregar un bloque de lista nuevo en el futuro:** una entrada en
+  `LIST_SCHEMAS` (forma de los datos) + una en `BLOCK_DEFS` (render de
+  solo lectura, ya existía como patrón). El editor, el modal, el botón
+  del panel y el conteo salen solos — no se escribe UI nueva.
+- **Qué no cubre esto:** piezas de contenido (tiene su propio editor
+  más especializado, con estado delivered/pending), links (tiene 3
+  variantes de presentación — queda para la Fase 3), y el
+  orden/visibilidad de bloques completos (ya resuelto por drag&drop en
+  la página, sin relación con este motor).
+
 ## Modo administrador (`js/admin.js`)
 
 - Se activa con `?admin=true`, ruta `/admin` (via `_redirects`), o

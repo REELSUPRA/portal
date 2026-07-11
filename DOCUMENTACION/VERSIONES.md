@@ -70,6 +70,19 @@ del orden de bloques) no incluida en este pase.
   claro/oscuro) quedan pendientes — ver
   [PLAN_V2_CMS.md](PLAN_V2_CMS.md).
 
+## v0.6 — Portal Cliente V2, Fase 2: editor genérico de listas (2026-07-11)
+
+- Roadmap, Bitácora, Calendario, Recursos, Documentos, Material
+  pendiente, Próximos pasos y Mejoras disponibles ahora se administran
+  por completo desde el panel (crear/editar/eliminar/reordenar), sin
+  tocar `data.js`.
+- Un solo motor de edición para las 8 listas, dirigido por un esquema
+  declarativo — arquitectura preparada para que agregar un bloque de
+  lista nuevo no requiera código específico.
+- Fases 3 (accesos rápidos en el header) y 4 (sistema de diseño:
+  radios, sombras, estilos de botón/tarjeta, claro/oscuro) quedan
+  pendientes — ver [PLAN_V2_CMS.md](PLAN_V2_CMS.md).
+
 ## Deployment — 2026-07-11
 
 - Repo conectado a GitHub: `https://github.com/REELSUPRA/portal`

@@ -1,8 +1,8 @@
 # Plan — Portal Cliente V2: Panel de administración integral (CMS + Theme Builder)
 
-Estado: **Fase 1 (Theme Builder) implementada** (2026-07-11). Fases
-2-4 pendientes — ver registro de implementación al final del
-documento. Este documento analiza el
+Estado: **Fases 1 (Theme Builder) y 2 (editor genérico de listas)
+implementadas** (2026-07-11). Fases 3-4 pendientes — ver registro de
+implementación al final del documento. Este documento analiza el
 pedido de convertir el modo admin en un panel tipo CMS/SaaS —
 identidad visual completa, edición total de contenido sin tocar
 `data.js`, accesos rápidos configurables, sistema de diseño por
@@ -233,3 +233,40 @@ fuera de esta ronda de fases.
   correctamente (11 color + 3 select + 5 range), cambios de fuente/
   tamaño/color se aplican en vivo, y persisten tras guardar y recargar
   sin modo admin. Regresión completa sin errores.
+
+### Fase 2 — Editor genérico de listas (2026-07-11) — ✅ implementada
+
+Alcance: Roadmap, Bitácora, Calendario, Recursos, Documentos, Material
+pendiente, Próximos pasos y Mejoras disponibles (los 8 pedidos
+explícitamente — Links importantes queda para la Fase 3, según lo ya
+acordado; piezas de contenido sigue con su editor propio).
+
+- **`RS.LIST_SCHEMAS`** (`js/render.js`): esquema declarativo por
+  lista — campos, valor por defecto de un item nuevo, y cómo mostrar
+  su etiqueta en la vista de lista. Título e ícono se leen de
+  `BLOCK_DEFS`, no se duplican.
+- **Un solo motor de edición** (`js/admin.js`): un modal
+  (`openListEditor`) con dos vistas (lista/formulario), reutilizado sin
+  cambios por las 8 listas. El formulario se genera campo por campo
+  desde el esquema, reutilizando `field()`/`selectField()` — los mismos
+  helpers del Theme Builder, no hubo que escribir un generador nuevo.
+- **`primitive: true`** resuelve las listas de strings simples
+  (Material pendiente, Próximos pasos) con el mismo motor que las
+  listas de objetos, sin una rama de código separada.
+- **Reordenar con flechas ↑/↓** en vez de drag&drop dentro del modal —
+  más simple de implementar y de usar en un contexto de lista corta
+  dentro de un modal (el drag&drop de bloques completos en la página
+  sigue igual, no se tocó).
+- **Acceso desde el panel:** grilla de botones por proyecto, uno por
+  lista, con conteo de elementos (`buildContentListButtons`) — abre el
+  editor de esa lista.
+- **Arquitectura preparada para el futuro** (pedido explícito de esta
+  fase): agregar un bloque de lista nuevo es una entrada en
+  `LIST_SCHEMAS` + una en `BLOCK_DEFS` — nada más. No hay lógica
+  específica por tipo de bloque en el motor de edición.
+- Verificado con Chromium headless contra 3 esquemas representativos
+  (Recursos: texto+URL: Roadmap: texto+textarea+select; Bitácora:
+  fecha+select+texto) y una lista primitiva (Próximos pasos): agregar,
+  editar, reordenar, eliminar, contador actualizado, guardado y
+  persistencia tras recargar sin admin — todo sin errores. Regresión
+  completa de las 5 vistas también sin errores.

@@ -3,6 +3,26 @@
 Registro cronológico de cambios, más granular que
 [VERSIONES.md](VERSIONES.md). Orden: más reciente arriba.
 
+## 2026-07-11 (Portal Cliente V2 — Fase 2: editor genérico de listas)
+
+- **Feature:** `RS.LIST_SCHEMAS` declarativo — 8 listas (Roadmap,
+  Bitácora, Calendario, Recursos, Documentos, Material pendiente,
+  Próximos pasos, Mejoras disponibles) administrables por completo
+  desde el panel: crear, editar, eliminar, reordenar.
+- **Feature:** un solo motor de edición (`openListEditor` + vistas de
+  lista/formulario en `js/admin.js`) reutilizado por las 8 — sin lógica
+  específica por tipo de bloque. El formulario reutiliza
+  `field()`/`selectField()` ya existentes.
+- **Feature:** grilla de accesos por proyecto en el panel
+  (`buildContentListButtons`), con conteo de elementos por lista.
+- **Arquitectura:** agregar un bloque de lista nuevo en el futuro =
+  una entrada en `LIST_SCHEMAS` + una en `BLOCK_DEFS` — objetivo
+  explícito de esta fase, cumplido.
+- Ver detalle en [PLAN_V2_CMS.md](PLAN_V2_CMS.md).
+- Verificado con Chromium headless sobre 3 esquemas representativos +
+  1 lista primitiva (string): CRUD completo, guardado y persistencia
+  tras recargar sin admin. Regresión completa sin errores.
+
 ## 2026-07-11 (Portal Cliente V2 — Fase 1: Theme Builder)
 
 - **Feature:** `THEME_SCHEMA` declarativo en `js/render.js` — 19

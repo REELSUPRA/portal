@@ -30,6 +30,15 @@
  *   - El logo del proyecto se cambia haciendo clic en el ícono
  *     que aparece sobre el emoji/logo, en el encabezado.
  *
+ * Desde el panel lateral (botón Admin de la barra superior), cada
+ * proyecto tiene un botón por lista (Roadmap, Bitácora, Calendario,
+ * Recursos, Documentos, Material pendiente, Próximos pasos, Mejoras
+ * disponibles) que abre el editor genérico de listas: crear, editar,
+ * eliminar y reordenar cualquier elemento sin tocar data.js. Un solo
+ * motor (RS.LIST_SCHEMAS + el modal de abajo) sirve a las 8 — agregar
+ * un bloque de lista nuevo es una entrada en el esquema, no un editor
+ * nuevo.
+ *
  * Cualquier modificación marca el estado como "sin guardar" y muestra
  * una barra inferior con un único botón "Guardar cambios", que
  * persiste todo (vía js/store.js — hoy localStorage) y avisa antes de
@@ -282,6 +291,223 @@
   }
 
   /* ---------------------------------------------------------- */
+  /* Editor genérico de listas — un solo motor para Roadmap,      */
+  /* Bitácora, Calendario, Recursos, Documentos, Material         */
+  /* pendiente, Próximos pasos y Mejoras disponibles. Agregar un  */
+  /* bloque de lista nuevo en el futuro = una entrada en          */
+  /* RS.LIST_SCHEMAS (+ una en RS.BLOCK_DEFS para el render de    */
+  /* solo lectura) — no un editor nuevo.                          */
+  /* ---------------------------------------------------------- */
+
+  let listEditorEl;
+  let listEditorState = null; // { project, listKey, mode: 'list'|'form', editingIndex, draft }
+
+  function getList(project, listKey) {
+    return project[listKey] || (project[listKey] = []);
+  }
+
+  function buildContentListButtons(project) {
+    const wrap = document.createElement("div");
+    wrap.className = "content-list-buttons";
+    Object.keys(RS.LIST_SCHEMAS).forEach((listKey) => {
+      const def = RS.BLOCK_DEFS[listKey];
+      if (!def) return;
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "content-list-btn";
+      btn.innerHTML = `
+        <span>${RS.icon(def.icon)}${def.title}</span>
+        <span class="content-list-btn__count" data-list-count data-project-id="${project.id}" data-list-key="${listKey}">${getList(project, listKey).length}</span>`;
+      btn.addEventListener("click", () => openListEditor(project, listKey));
+      wrap.appendChild(btn);
+    });
+    return wrap;
+  }
+
+  function refreshContentListCounts() {
+    if (!panelEl) return;
+    panelEl.querySelectorAll("[data-list-count]").forEach((el) => {
+      const project = window.CLIENT_DATA.projects.find((p) => p.id === el.dataset.projectId);
+      if (project) el.textContent = getList(project, el.dataset.listKey).length;
+    });
+  }
+
+  function ensureListEditorModal() {
+    if (listEditorEl) return;
+    listEditorEl = document.createElement("div");
+    listEditorEl.className = "piece-modal-overlay";
+    listEditorEl.innerHTML = `<div class="piece-modal list-editor-modal">
+      <div class="admin-panel__header">
+        <div class="admin-panel__title" id="listEditorTitle"></div>
+        <button class="admin-panel__close" id="listEditorClose">${RS.icon("x")}</button>
+      </div>
+      <div class="admin-panel__body" id="listEditorBody"></div>
+    </div>`;
+    document.body.appendChild(listEditorEl);
+    listEditorEl.addEventListener("click", (e) => { if (e.target === listEditorEl) closeListEditorModal(); });
+    listEditorEl.querySelector("#listEditorClose").addEventListener("click", closeListEditorModal);
+  }
+
+  function openListEditor(project, listKey) {
+    ensureListEditorModal();
+    listEditorState = { project, listKey, mode: "list", editingIndex: null, draft: null };
+    renderListEditor();
+    listEditorEl.classList.add("is-open");
+  }
+
+  function closeListEditorModal() {
+    if (listEditorEl) listEditorEl.classList.remove("is-open");
+    refreshContentListCounts();
+  }
+
+  function renderListEditor() {
+    listEditorState.mode === "list" ? renderListEditorListView() : renderListEditorFormView();
+  }
+
+  function renderListEditorListView() {
+    const { project, listKey } = listEditorState;
+    const schema = RS.LIST_SCHEMAS[listKey];
+    const def = RS.BLOCK_DEFS[listKey];
+    const list = getList(project, listKey);
+
+    listEditorEl.querySelector("#listEditorTitle").innerHTML = `${RS.icon(def.icon)} ${def.title}`;
+    const body = listEditorEl.querySelector("#listEditorBody");
+    body.innerHTML = "";
+
+    if (!list.length) {
+      const empty = document.createElement("p");
+      empty.className = "empty-hint";
+      empty.textContent = "Todavía no hay elementos. Agregá el primero.";
+      body.appendChild(empty);
+    }
+
+    list.forEach((item, i) => {
+      const row = document.createElement("div");
+      row.className = "list-editor-item";
+      const labelText = schema.itemLabel(item);
+      row.innerHTML = `
+        <div class="list-editor-item__order">
+          <button type="button" data-move="-1" ${i === 0 ? "disabled" : ""}>${RS.icon("chevron-up")}</button>
+          <button type="button" data-move="1" ${i === list.length - 1 ? "disabled" : ""}>${RS.icon("chevron-down")}</button>
+        </div>
+        <span class="list-editor-item__label">${RS.esc(labelText)}</span>
+        <button type="button" class="list-editor-item__edit" data-edit title="Editar">${RS.icon("pencil")}</button>
+        <button type="button" class="list-editor-item__delete" data-delete title="Eliminar">${RS.icon("trash-2")}</button>`;
+      row.querySelector('[data-move="-1"]').addEventListener("click", () => moveListItem(i, -1));
+      row.querySelector('[data-move="1"]').addEventListener("click", () => moveListItem(i, 1));
+      row.querySelector("[data-edit]").addEventListener("click", () => startEditListItem(i));
+      row.querySelector("[data-delete]").addEventListener("click", () => deleteListItem(i));
+      body.appendChild(row);
+    });
+
+    const addBtn = document.createElement("button");
+    addBtn.type = "button";
+    addBtn.className = "btn btn--ghost";
+    addBtn.style.cssText = "width:100%; justify-content:center; margin-top:var(--space-3);";
+    addBtn.innerHTML = `${RS.icon("plus")} Agregar`;
+    addBtn.addEventListener("click", startAddListItem);
+    body.appendChild(addBtn);
+
+    RS.hydrateIcons();
+  }
+
+  function moveListItem(index, delta) {
+    const { project, listKey } = listEditorState;
+    const list = getList(project, listKey);
+    const target = index + delta;
+    if (target < 0 || target >= list.length) return;
+    [list[index], list[target]] = [list[target], list[index]];
+    markDirty();
+    renderListEditorListView();
+    refreshListBlockOnPage();
+  }
+
+  function deleteListItem(index) {
+    const { project, listKey } = listEditorState;
+    const list = getList(project, listKey);
+    if (!window.confirm("¿Eliminar este elemento? No se puede deshacer.")) return;
+    list.splice(index, 1);
+    markDirty();
+    renderListEditorListView();
+    refreshListBlockOnPage();
+  }
+
+  function startAddListItem() {
+    const schema = RS.LIST_SCHEMAS[listEditorState.listKey];
+    listEditorState.mode = "form";
+    listEditorState.editingIndex = null;
+    listEditorState.draft = schema.newItem();
+    renderListEditorFormView();
+  }
+
+  function startEditListItem(index) {
+    const { project, listKey } = listEditorState;
+    const list = getList(project, listKey);
+    const schema = RS.LIST_SCHEMAS[listKey];
+    listEditorState.mode = "form";
+    listEditorState.editingIndex = index;
+    listEditorState.draft = schema.primitive ? list[index] : { ...list[index] };
+    renderListEditorFormView();
+  }
+
+  function renderListEditorFormView() {
+    const { listKey, draft } = listEditorState;
+    const schema = RS.LIST_SCHEMAS[listKey];
+    const def = RS.BLOCK_DEFS[listKey];
+
+    listEditorEl.querySelector("#listEditorTitle").innerHTML = `${RS.icon(def.icon)} ${def.title}`;
+    const body = listEditorEl.querySelector("#listEditorBody");
+    body.innerHTML = "";
+
+    if (schema.primitive) {
+      body.appendChild(field(schema.fields[0].label, draft, (v) => { listEditorState.draft = v; }));
+    } else {
+      schema.fields.forEach((f) => {
+        const onChange = (v) => { listEditorState.draft[f.key] = v; };
+        if (f.type === "select") body.appendChild(selectField(f.label, draft[f.key], f.options, onChange));
+        else if (f.type === "textarea") body.appendChild(field(f.label, draft[f.key], onChange, true));
+        else body.appendChild(field(f.label, draft[f.key], onChange, false, f.type));
+      });
+    }
+
+    const actions = document.createElement("div");
+    actions.style.cssText = "display:flex; gap:var(--space-2); margin-top:var(--space-4);";
+    const backBtn = document.createElement("button");
+    backBtn.type = "button";
+    backBtn.className = "btn btn--ghost";
+    backBtn.style.cssText = "flex:1; justify-content:center;";
+    backBtn.textContent = "Cancelar";
+    backBtn.addEventListener("click", () => { listEditorState.mode = "list"; renderListEditorListView(); });
+    const saveBtn = document.createElement("button");
+    saveBtn.type = "button";
+    saveBtn.className = "btn btn--primary";
+    saveBtn.style.cssText = "flex:1; justify-content:center;";
+    saveBtn.innerHTML = `${RS.icon("check")} Guardar`;
+    saveBtn.addEventListener("click", commitListItem);
+    actions.appendChild(backBtn);
+    actions.appendChild(saveBtn);
+    body.appendChild(actions);
+
+    RS.hydrateIcons();
+  }
+
+  function commitListItem() {
+    const { project, listKey, editingIndex, draft } = listEditorState;
+    const list = getList(project, listKey);
+    if (editingIndex === null) list.push(draft);
+    else list[editingIndex] = draft;
+    markDirty();
+    listEditorState.mode = "list";
+    renderListEditorListView();
+    refreshListBlockOnPage();
+    showToast("Elemento guardado");
+  }
+
+  function refreshListBlockOnPage() {
+    if (document.getElementById("blocksContainer")) RS.renderProjectDetail();
+  }
+
+  /* ---------------------------------------------------------- */
   /* Panel lateral (textos básicos)                               */
   /* ---------------------------------------------------------- */
 
@@ -350,11 +576,12 @@
       body.appendChild(field("Nombre del proyecto", p.name, (v) => (p.name = v)));
       body.appendChild(field("Estado (texto visible)", p.status, (v) => (p.status = v)));
       body.appendChild(field("Objetivo", p.objective, (v) => (p.objective = v), true));
+      body.appendChild(buildContentListButtons(p));
     });
 
     const hint = document.createElement("p");
     hint.style.cssText = "font-size:12.5px;color:var(--rs-gray-300);line-height:1.6;margin-top:var(--space-4);";
-    hint.textContent = "Para editar piezas de contenido, logo, y orden de los bloques, hacelo directamente sobre la página del proyecto — no hace falta este panel.";
+    hint.textContent = "Para editar piezas de contenido, logo, y el orden/visibilidad de los bloques, hacelo directamente sobre la página del proyecto — no hace falta este panel.";
     body.appendChild(hint);
 
     isBuilt = true;
@@ -706,7 +933,7 @@
         if (!window.RS_ADMIN_MODE) toggleAdminMode();
         if (window.RS_ADMIN_MODE) openPanel();
       }
-      if (e.key === "Escape") { closePanel(); closePieceModal(); closeImageModal(); }
+      if (e.key === "Escape") { closePanel(); closePieceModal(); closeImageModal(); closeListEditorModal(); }
     });
 
     if (document.getElementById("blocksContainer")) initBlockDragDrop();
