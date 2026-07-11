@@ -1,6 +1,6 @@
 # Plan — Experiencia Premium del Portal del Cliente
 
-Estado: **Fase 1 implementada** (2026-07-11). Fases 2-4 pendientes. Este
+Estado: **Fases 1 y 2 implementadas** (2026-07-11). Fases 3-4 pendientes. Este
 documento responde al pedido
 de mejora visual/UX profunda sin cambiar la arquitectura de base. Se
 actualiza a "implementado" ítem por ítem en [CHANGELOG.md](CHANGELOG.md)
@@ -286,3 +286,30 @@ de passphrase para el admin. Implementado en Fase 1.
 - Logos reales de los proyectos de Juan: **pendiente** — es un dato,
   no código; se sube desde el botón que ya existe sobre el logo/emoji
   de cada proyecto en modo admin.
+
+### Fase 2 — Dashboard visual (2026-07-11) — ✅ implementada
+
+- `contentProgress(project)` (`js/render.js`): cálculo único de
+  entregado/total/porcentaje, reutilizado por el bloque "Piezas de
+  contenido" (ya existía ahí) y por los dos lugares nuevos — no hay
+  tres versiones del mismo número.
+- `progressBar(percent, size)`: componente chico reutilizado tal cual
+  en la tarjeta del índice (`renderProjectGrid`, tamaño `sm`) y en el
+  hero del detalle (`renderProjectDetail`, tamaño `lg`, como
+  "Progreso del proyecto"). Color de la barra = variable de acento
+  (`--rs-red`), así que también cambia con el color de marca del
+  cliente (Fase 1).
+- Estados nuevos agregados al diccionario existente
+  `STATUS_LABEL`/`STATUS_CLASS` (no una estructura nueva):
+  `planning` (🔵 Planificación, color nuevo `--status-planning`) y
+  `pending-approval` (🟡 Pendiente aprobación — reutiliza el color
+  amber ya existente de `review`, cero CSS nueva para ese caso).
+  `active` (🟢 En producción) y `done` (⚪ Finalizado) ya existían.
+- Ajuste de layout: el badge de estado salió del footer de la tarjeta
+  (antes compartía fila con el botón) para poder apilar
+  badge → barra de progreso → botón; `.status-badge` ahora lleva
+  `align-self: flex-start` para no estirarse en contenedores flex en
+  columna.
+- Verificado con Chromium headless en las 5 vistas de regresión: sin
+  errores. Confirmado visualmente que el layout de tarjetas y el hero
+  no se rompieron.

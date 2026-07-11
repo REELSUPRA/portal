@@ -26,6 +26,8 @@
   --status-upcoming-bg: #6e6e7318;
   --status-review: #d69e2e;
   --status-review-bg: #d69e2e18;
+  --status-planning: #2f6fed;
+  --status-planning-bg: #2f6fed18;
 
   /* Tipografía */
   --font-sans: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -386,14 +388,69 @@ button {
 .project-card__footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   margin-top: auto;
   padding-top: var(--space-2);
+}
+
+/* ============================================================
+   BARRA DE PROGRESO
+   ============================================================ */
+
+.progress-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.progress-bar__track {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--rs-gray-50);
+  overflow: hidden;
+}
+
+.progress-bar__fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--rs-red);
+  transition: width var(--duration) var(--ease);
+}
+
+.progress-bar__label {
+  font-family: var(--font-mono), var(--font-sans);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--rs-gray-500);
+  min-width: 34px;
+  text-align: right;
+}
+
+.progress-bar--lg .progress-bar__track {
+  height: 8px;
+}
+
+.progress-bar--lg .progress-bar__label {
+  font-size: 13px;
+}
+
+.hero-progress {
+  margin-top: var(--space-6);
+  max-width: 420px;
+}
+
+.hero-progress__label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--rs-gray-500);
+  margin-bottom: var(--space-2);
 }
 
 .status-badge {
   display: inline-flex;
   align-items: center;
+  align-self: flex-start;
   gap: var(--space-2);
   font-family: var(--font-mono), var(--font-sans);
   font-size: 12px;
@@ -432,6 +489,14 @@ button {
 }
 .status-badge--review .status-badge__dot {
   background: var(--status-review);
+}
+
+.status-badge--planning {
+  color: var(--status-planning);
+  background: var(--status-planning-bg);
+}
+.status-badge--planning .status-badge__dot {
+  background: var(--status-planning);
 }
 
 .btn {

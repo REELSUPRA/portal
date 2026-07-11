@@ -14,8 +14,22 @@ const RS = (() => {
   const MONTHS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
   const WEEKDAYS = ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"];
 
-  const STATUS_LABEL = { active: "En producción", upcoming: "Próximo", review: "En revisión", done: "Finalizado" };
-  const STATUS_CLASS = { active: "status-badge--active", upcoming: "status-badge--upcoming", review: "status-badge--review", done: "status-badge--upcoming" };
+  const STATUS_LABEL = {
+    active: "En producción",
+    "pending-approval": "Pendiente aprobación",
+    planning: "Planificación",
+    upcoming: "Próximo",
+    review: "En revisión",
+    done: "Finalizado",
+  };
+  const STATUS_CLASS = {
+    active: "status-badge--active",
+    "pending-approval": "status-badge--review",
+    planning: "status-badge--planning",
+    upcoming: "status-badge--upcoming",
+    review: "status-badge--review",
+    done: "status-badge--upcoming",
+  };
   const ROADMAP_TAG = { "in-progress": "En curso", upcoming: "Próxima etapa", done: "Completada" };
 
   // Estado de navegación del calendario (mes que se está mostrando).
@@ -38,6 +52,25 @@ const RS = (() => {
 
   function inferStatusTone(project) {
     return project.statusTone || "active";
+  }
+
+  // Progreso general del proyecto = piezas de contenido entregadas.
+  // Un solo cálculo, reutilizado por el bloque de piezas, la tarjeta
+  // del índice y el hero del detalle — evita tres versiones del mismo
+  // porcentaje que puedan desincronizarse.
+  function contentProgress(project) {
+    const pieces = project.contentPieces || [];
+    const delivered = pieces.filter((p) => p.status === "delivered").length;
+    const total = pieces.length;
+    const percent = total ? Math.round((delivered / total) * 100) : 0;
+    return { delivered, total, percent };
+  }
+
+  function progressBar(percent, size = "md") {
+    return `<div class="progress-bar progress-bar--${size}">
+      <div class="progress-bar__track"><div class="progress-bar__fill" style="width:${percent}%"></div></div>
+      <span class="progress-bar__label">${percent}%</span>
+    </div>`;
   }
 
   function hexToRgba(hex, alpha) {
@@ -157,6 +190,7 @@ const RS = (() => {
 
     el.innerHTML = data.projects.map((p, i) => {
       const tone = inferStatusTone(p);
+      const { total, percent } = contentProgress(p);
       return `
       <article class="project-card">
         <div class="project-card__top">
@@ -171,10 +205,11 @@ const RS = (() => {
           </div>
         </div>
         <p class="project-card__objective">${esc(p.objective)}</p>
+        <span class="status-badge ${STATUS_CLASS[tone]}">
+          <span class="status-badge__dot"></span>${esc(STATUS_LABEL[tone] || p.status)}
+        </span>
+        ${total ? progressBar(percent, "sm") : ""}
         <div class="project-card__footer">
-          <span class="status-badge ${STATUS_CLASS[tone]}">
-            <span class="status-badge__dot"></span>${esc(STATUS_LABEL[tone] || p.status)}
-          </span>
           <a class="btn btn--primary" href="project.html?id=${encodeURIComponent(p.id)}">
             Ingresar al proyecto ${icon("arrow-right")}
           </a>
@@ -244,7 +279,7 @@ const RS = (() => {
 
   function blockContentPieces(project) {
     const pieces = project.contentPieces || [];
-    const delivered = pieces.filter((p) => p.status === "delivered").length;
+    const { delivered } = contentProgress(project);
 
     const chips = pieces.map((p, i) => {
       const cls = p.status === "delivered" ? "content-piece--delivered" : "content-piece--pending";
@@ -417,6 +452,7 @@ const RS = (() => {
     const project = getProjectFromURL();
     if (!project) return;
     const tone = inferStatusTone(project);
+    const contentProgressBlock = contentProgress(project);
 
     const heroEl = document.getElementById("projectHero");
     const logoAdmin = isAdmin()
@@ -438,7 +474,11 @@ const RS = (() => {
         <div class="meta-item"><div class="meta-item__label">Idioma</div><div class="meta-item__value">${esc(project.language)}</div></div>
         <div class="meta-item"><div class="meta-item__label">Público</div><div class="meta-item__value">${esc(project.audience)}</div></div>
         <div class="meta-item"><div class="meta-item__label">Plan contratado</div><div class="meta-item__value">${esc(project.plan)} — ${esc(project.planDetail)}</div></div>
-      </div>`;
+      </div>
+      ${contentProgressBlock.total ? `<div class="hero-progress">
+        <div class="hero-progress__label">Progreso del proyecto</div>
+        ${progressBar(contentProgressBlock.percent, "lg")}
+      </div>` : ""}`;
 
     document.title = `${project.name} — Portal ${window.CLIENT_DATA.agency.name}`;
     renderBlocks(project);

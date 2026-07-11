@@ -3,6 +3,24 @@
 Registro cronológico de cambios, más granular que
 [VERSIONES.md](VERSIONES.md). Orden: más reciente arriba.
 
+## 2026-07-11 (UX Premium — Fase 2)
+
+- **Feature:** barra de progreso general del proyecto
+  (`contentProgress` + `progressBar` en `js/render.js`) — en la
+  tarjeta del índice y en el hero del detalle. Reutiliza el mismo
+  cálculo que ya usaba el bloque "Piezas de contenido".
+- **Feature:** dos estados nuevos (`planning` 🔵, `pending-approval`
+  🟡) sumados al diccionario de estados existente — `pending-approval`
+  reutiliza el color amber ya existente, `planning` es el único color
+  nuevo agregado.
+- **Fix de layout:** `.status-badge` ahora tiene `align-self:
+  flex-start` para no estirarse al pasar a ser hijo directo de un
+  contenedor flex en columna (necesario para apilar badge + barra de
+  progreso en la tarjeta del índice).
+- Ver detalle en [PLAN_UX_PREMIUM.md](PLAN_UX_PREMIUM.md#fase-2--dashboard-visual-2026-07-11--✅-implementada).
+- Verificado con Chromium headless: sin errores en las 5 vistas de
+  regresión, confirmado visualmente.
+
 ## 2026-07-11 (UX Premium — Fase 1)
 
 - **Feature:** color de marca por cliente (`client.primaryColor`) vía
