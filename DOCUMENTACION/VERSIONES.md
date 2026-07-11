@@ -46,6 +46,16 @@ Pendiente real: datos de producción de Juan (logos, links, recursos) —
 contenido, no código. Fase 5 del plan (persistencia en `localStorage`
 del orden de bloques) no incluida en este pase.
 
+## v0.4 — Guardado centralizado y persistencia (2026-07-11)
+
+- Barra de guardado inferior, única, que aparece solo con cambios
+  pendientes en modo admin.
+- Persistencia en `localStorage` vía capa desacoplada (`js/store.js`),
+  con interfaz async lista para migrar a un backend real más adelante.
+- Aviso de cierre de pestaña con cambios sin guardar.
+- Con esto, la "Fase 5" mencionada en el plan de UX Premium queda
+  resuelta (y ampliada a todo el admin, no solo el orden de bloques).
+
 ## Deployment — 2026-07-11
 
 - Repo conectado a GitHub: `https://github.com/REELSUPRA/portal`

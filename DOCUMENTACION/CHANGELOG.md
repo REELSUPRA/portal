@@ -3,6 +3,35 @@
 Registro cronológico de cambios, más granular que
 [VERSIONES.md](VERSIONES.md). Orden: más reciente arriba.
 
+## 2026-07-11 (Guardado centralizado + persistencia)
+
+- **Feature:** capa de persistencia desacoplada `js/store.js`
+  (`RSStore.load/save/hydrate`), hoy sobre `localStorage`, con
+  interfaz async (`Promise`) para poder cambiar de backend (GitHub,
+  Supabase, etc.) más adelante sin tocar `admin.js`.
+- **Feature:** tracking de cambios sin guardar (`markDirty()` en
+  `js/admin.js`) en TODOS los puntos de edición del admin: campos de
+  texto/color/checkbox del panel, editor de piezas de contenido,
+  reordenar/ocultar bloques, subir logo/portada.
+- **Feature:** barra inferior fija (`.save-bar`) que solo aparece con
+  cambios pendientes, con un único botón "Guardar cambios" — centraliza
+  el guardado que antes eran varias acciones sueltas ("Aplicar
+  cambios" solo refrescaba la vista, no persistía nada).
+- **Feature:** confirmación por toast al guardar + la barra se oculta;
+  aviso nativo (`beforeunload`) si se intenta cerrar/navegar con
+  cambios sin guardar.
+- **Feature:** `RSStore.hydrate()` se llama al principio de `boot()`
+  (`index.html`/`project.html`, antes de cualquier render) — los
+  cambios guardados sobreviven a un reload, incluso sin volver a
+  entrar en modo admin.
+- Ver el trade-off aceptado (reemplazo completo, no merge) en
+  [DECISIONES.md](DECISIONES.md).
+- Verificado con Chromium headless: barra ausente sin admin, aparece
+  al primer cambio, `beforeunload` bloquea el cierre mientras hay
+  cambios sin guardar, se guarda y persiste tras recargar (confirmado
+  leyendo el hero ya editado en una visita nueva sin admin). Sin
+  errores en la suite de regresión completa.
+
 ## 2026-07-11 (UX Premium — Fase 4, cierre del plan)
 
 - **Feature:** `blockLinks()` soporta 3 variantes por link

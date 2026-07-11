@@ -2,10 +2,11 @@
  * ============================================================
  * REELSUPRA — MODO ADMINISTRADOR
  * ============================================================
- * No persiste en una base de datos: los cambios viven en memoria
- * del navegador (y en sessionStorage solo para recordar si el
- * modo admin está activo mientras navegás entre páginas). Para
- * dejarlos permanentes, usar "Exportar JSON" y reemplazar el
+ * No hay backend: los cambios se guardan en localStorage de este
+ * navegador (vía js/store.js) al tocar "Guardar cambios" — persisten
+ * entre visitas en ese mismo dispositivo, pero no se sincronizan a
+ * otros. Para que un cambio sea la nueva base para cualquier
+ * dispositivo/cliente, usar "Exportar JSON" y reemplazar el
  * contenido de js/data.js.
  *
  * Se activa con:
@@ -28,15 +29,21 @@
  *     numerito correspondiente (título, fecha, link, nota).
  *   - El logo del proyecto se cambia haciendo clic en el ícono
  *     que aparece sobre el emoji/logo, en el encabezado.
+ *
+ * Cualquier modificación marca el estado como "sin guardar" y muestra
+ * una barra inferior con un único botón "Guardar cambios", que
+ * persiste todo (vía js/store.js — hoy localStorage) y avisa antes de
+ * cerrar la pestaña si hay cambios pendientes.
  * ============================================================
  */
 
 (function () {
 
-  let panelEl, overlayEl, toastEl, pieceModalEl, imageModalEl;
+  let panelEl, overlayEl, toastEl, pieceModalEl, imageModalEl, saveBarEl;
   let isBuilt = false;
   let draggedBlockId = null;
   let imageModalConfig = null;
+  let isDirty = false;
 
   /* ---------------------------------------------------------- */
   /* Estado del modo admin (persistido solo en esta sesión)     */
@@ -116,6 +123,43 @@
     setTimeout(() => toastEl.classList.remove("is-visible"), 2200);
   }
 
+  /* ---------------------------------------------------------- */
+  /* Cambios sin guardar: barra inferior + guardado centralizado */
+  /* ---------------------------------------------------------- */
+
+  function ensureSaveBar() {
+    if (saveBarEl) return;
+    saveBarEl = document.createElement("div");
+    saveBarEl.className = "save-bar";
+    saveBarEl.innerHTML = `
+      <span class="save-bar__text">${RS.icon("alert-circle")} Tenés cambios sin guardar</span>
+      <button class="btn btn--primary" id="saveBarBtn">${RS.icon("check")} Guardar cambios</button>`;
+    document.body.appendChild(saveBarEl);
+    saveBarEl.querySelector("#saveBarBtn").addEventListener("click", saveChanges);
+    RS.hydrateIcons();
+  }
+
+  function markDirty() {
+    if (isDirty) return;
+    isDirty = true;
+    ensureSaveBar();
+    saveBarEl.classList.add("is-open");
+  }
+
+  function saveChanges() {
+    RSStore.save(window.CLIENT_DATA).then((ok) => {
+      isDirty = false;
+      if (saveBarEl) saveBarEl.classList.remove("is-open");
+      showToast(ok ? "Cambios guardados" : "No se pudo guardar — probá de nuevo");
+    });
+  }
+
+  window.addEventListener("beforeunload", (e) => {
+    if (!isDirty) return;
+    e.preventDefault();
+    e.returnValue = "";
+  });
+
   function field(labelText, value, onChange, multiline = false, type = "text") {
     const wrap = document.createElement("div");
     wrap.className = "admin-field";
@@ -126,7 +170,7 @@
     if (!multiline) input.type = type;
     else input.rows = 3;
     input.value = value || "";
-    input.addEventListener("input", (e) => onChange(e.target.value));
+    input.addEventListener("input", (e) => { onChange(e.target.value); markDirty(); });
     wrap.appendChild(input);
     return wrap;
   }
@@ -137,7 +181,7 @@
     const input = document.createElement("input");
     input.type = "checkbox";
     input.checked = !!checked;
-    input.addEventListener("change", (e) => onChange(e.target.checked));
+    input.addEventListener("change", (e) => { onChange(e.target.checked); markDirty(); });
     wrap.appendChild(input);
     wrap.appendChild(document.createTextNode(labelText));
     return wrap;
@@ -321,6 +365,7 @@
     const [moved] = blocks.splice(fromIdx, 1);
     blocks.splice(toIdx, 0, moved);
     RS.renderProjectDetail();
+    markDirty();
     showToast("Orden actualizado para este proyecto");
   }
 
@@ -330,6 +375,7 @@
     if (!block) return;
     block.visible = !block.visible;
     RS.renderProjectDetail();
+    markDirty();
   }
 
   /* ---------------------------------------------------------- */
@@ -371,7 +417,7 @@
     const select = document.createElement("select");
     select.innerHTML = `<option value="pending">Pendiente</option><option value="delivered">Entregada</option>`;
     select.value = piece.status;
-    select.addEventListener("change", (e) => (piece.status = e.target.value));
+    select.addEventListener("change", (e) => { piece.status = e.target.value; markDirty(); });
     statusWrap.appendChild(select);
     body.appendChild(statusWrap);
 
@@ -447,6 +493,7 @@
         imageModalConfig.set(reader.result);
         imageModalConfig.onSaved();
         closeImageModal();
+        markDirty();
         showToast("Imagen actualizada");
       };
       reader.readAsDataURL(file);
@@ -457,6 +504,7 @@
       imageModalConfig.set(e.target.value);
       imageModalConfig.onSaved();
       closeImageModal();
+      markDirty();
       showToast("Imagen actualizada");
     };
 
@@ -464,6 +512,7 @@
       imageModalConfig.set(null);
       imageModalConfig.onSaved();
       closeImageModal();
+      markDirty();
       showToast(imageModalConfig.removedMessage || "Imagen quitada");
     };
 

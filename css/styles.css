@@ -1076,6 +1076,59 @@ button {
 }
 
 /* ============================================================
+   BARRA DE CAMBIOS SIN GUARDAR
+   ============================================================ */
+
+.save-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 95;
+  background: var(--rs-black);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-6);
+  padding: var(--space-4) var(--space-6);
+  box-shadow: 0 -12px 32px -16px rgba(0, 0, 0, 0.3);
+  transform: translateY(100%);
+  transition: transform var(--duration) var(--ease);
+}
+
+.save-bar.is-open {
+  transform: translateY(0);
+}
+
+.save-bar__text {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--rs-gray-100);
+}
+
+.save-bar__text .icon {
+  color: var(--status-review);
+  width: 16px;
+  height: 16px;
+}
+
+.save-bar .btn--primary {
+  background: var(--rs-red);
+}
+
+.save-bar .btn--primary:hover {
+  background: var(--rs-white);
+  color: var(--rs-black);
+}
+
+@media (max-width: 640px) {
+  .save-bar { flex-direction: column; gap: var(--space-3); }
+}
+
+/* ============================================================
    BLOQUES REORDENABLES (project.html)
    ============================================================ */
 

@@ -119,6 +119,26 @@ V1.
 en memoria — se perdía al recargar.
 
 **Decisión:** confirmado usar `localStorage` (por navegador, sin
-backend) — no se implementa todavía (queda para la Fase 5 del plan UX
-Premium), pero la decisión de *cómo* resolverlo está tomada: no se
-introduce backend/base de datos para esto en la V1.
+backend). No se introduce backend/base de datos para esto en la V1.
+
+**Implementado (2026-07-11):** no solo el orden de bloques — se
+generalizó a **todo** lo editable en modo admin. `js/store.js`
+(`RSStore`) es la única pieza que toca `localStorage`; `admin.js`
+detecta cualquier modificación (`markDirty()`), muestra una barra
+inferior con un único botón "Guardar cambios", y avisa con
+`beforeunload` si hay cambios sin guardar. Al guardar,
+`RSStore.save(CLIENT_DATA)` persiste una foto completa; al volver a
+entrar, `RSStore.hydrate()` la reemplaza antes de cualquier render.
+
+**Trade-off aceptado:** es un reemplazo completo, no un merge. Si
+`data.js` cambia después de que alguien guardó localmente en su
+navegador, la foto guardada gana ahí — no ve los cambios nuevos de
+`data.js` hasta que se borre ese `localStorage` o se vuelva a guardar
+desde el admin. Aceptable para la V1 (un admin, pocos dispositivos);
+señalado para revisar si el uso crece.
+
+**Diseño para el cambio de backend futuro (GitHub/Supabase/otro):**
+`RSStore` expone `load()`/`save()`/`hydrate()` como `Promise`s desde
+el día uno, aunque `localStorage` sea síncrono — el objetivo es que
+cambiar el destino sea reescribir `js/store.js` únicamente, sin tocar
+`admin.js` ni el resto de la interfaz.

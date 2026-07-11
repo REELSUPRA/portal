@@ -34,16 +34,19 @@
   </footer>
 
   <script src="js/data.js"></script>
+  <script src="js/store.js"></script>
   <script src="js/render.js"></script>
   <script src="js/admin.js"></script>
   <script>
     function boot() {
-      RS.applyTheme();
-      RSAdmin.detectAdminMode();
-      RS.renderTopbar({ showBack: true });
-      RS.renderProjectDetail();
-      RS.hydrateIcons();
-      RSAdmin.init();
+      RSStore.hydrate().then(() => {
+        RS.applyTheme();
+        RSAdmin.detectAdminMode();
+        RS.renderTopbar({ showBack: true });
+        RS.renderProjectDetail();
+        RS.hydrateIcons();
+        RSAdmin.init();
+      });
     }
     document.addEventListener("DOMContentLoaded", boot);
   </script>

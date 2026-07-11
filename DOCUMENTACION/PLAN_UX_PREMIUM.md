@@ -362,6 +362,8 @@ Las 4 fases del plan de UX Premium quedaron implementadas el
 2026-07-11, todas verificadas sin errores y sin tocar la arquitectura
 de base (sitio estático, sin backend, mismo motor de bloques). Pendiente
 real para una entrega 100% terminada a Juan: datos reales (logos,
-links, recursos) — es contenido, no código. La Fase 5 (persistencia en
-`localStorage` del orden de bloques) no se incluyó en este pase; queda
-como próxima mejora si se decide priorizarla.
+links, recursos) — es contenido, no código. La Fase 5 (persistencia) se
+implementó después, el mismo día, con un alcance más amplio del
+originalmente previsto acá — ver "Guardado centralizado y
+persistencia" en [CHANGELOG.md](CHANGELOG.md) y
+[DECISIONES.md](DECISIONES.md).

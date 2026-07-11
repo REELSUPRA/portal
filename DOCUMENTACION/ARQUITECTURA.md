@@ -18,9 +18,10 @@ _redirects           Redirect de Netlify: /admin -> /index.html?admin=true
 css/styles.css       Design system completo (variables, componentes)
 js/data.js           Datos del cliente y sus proyectos — ÚNICO archivo
                      pensado para editar al reutilizar con otro cliente
+js/store.js          Capa de persistencia (RSStore) — hoy localStorage
 js/render.js         Motor de renderizado — lee CLIENT_DATA y dibuja
 js/admin.js          Modo administrador — estado de sesión, drag&drop,
-                     modales de edición
+                     modales de edición, tracking de cambios sin guardar
 DOCUMENTACION/       Esta carpeta
 ```
 
@@ -90,9 +91,28 @@ layout, drag&drop o visibilidad, que ya está resuelta a nivel genérico.
   [DECISIONES.md](DECISIONES.md).
 - Estado en `window.RS_ADMIN_MODE`, persistido solo en
   `sessionStorage` (no hay backend, no hay usuarios, no hay login real).
-- Todo lo editable en modo admin vive **en memoria del navegador**
-  durante la sesión. Para persistir cambios: "Exportar JSON" y
-  reemplazar manualmente el objeto en `js/data.js`.
+- Todo lo editable en modo admin marca el estado como "sin guardar" —
+  aparece una barra inferior con un único botón "Guardar cambios"
+  (`markDirty()`/`saveChanges()` en `admin.js`). Al guardar, persiste
+  vía `RSStore.save()` (`js/store.js` — hoy `localStorage`, por
+  navegador) y avisa con `beforeunload` si se intenta cerrar la
+  pestaña con cambios sin guardar. Al volver a entrar en ese mismo
+  navegador, `RSStore.hydrate()` reemplaza `CLIENT_DATA` con lo
+  guardado, antes de cualquier render (ver `boot()` en `index.html`/
+  `project.html`).
+- **`RSStore` es la única pieza que sabe dónde se guarda.** Cambiar el
+  destino (GitHub, Supabase, un backend propio) es reescribir
+  `js/store.js` — `admin.js` solo llama `load()`/`save()`/`hydrate()`,
+  nunca `localStorage` directamente. La interfaz ya es async
+  (`Promise`) aunque `localStorage` sea síncrono, para que ese cambio
+  futuro no toque la UI del admin.
+- **Limitación conocida:** `save()` guarda una foto completa de
+  `CLIENT_DATA`; `hydrate()` la reemplaza entera, sin merge. Si
+  `data.js` cambia después de un guardado local, la foto vieja gana en
+  ese navegador. Ver [DECISIONES.md](DECISIONES.md).
+- Para que un cambio local sea la nueva base para todos (otros
+  dispositivos, nuevo cliente): "Exportar JSON" y reemplazar
+  manualmente el objeto en `js/data.js`.
 - Cubre hoy: reordenar/ocultar bloques (drag&drop), editar piezas de
   contenido (modal), cambiar logo de proyecto y portada de cliente
   (modal de imagen genérico, `openImageModal`, upload o URL), color de
