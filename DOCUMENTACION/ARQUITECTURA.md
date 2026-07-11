@@ -54,10 +54,11 @@ window.CLIENT_DATA = {
 }
 ```
 
-`client.coverImage` (portada del hero) y `client.primaryColor` (acento
-de marca) siguen el mismo patrón que `logoUrl`: URL o base64 subido
-desde el admin. `agency.adminPassphrase` es el gate simple del modo
-admin (ver sección "Modo administrador" abajo).
+`client.coverImage` (portada del hero), `client.logoUrl` (logo en el
+topbar) y `client.faviconUrl` siguen el mismo patrón: URL o base64
+subido desde el admin. `client.theme` guarda todas las variables del
+Theme Builder (ver sección propia abajo). `agency.adminPassphrase` es
+el gate simple del modo admin (ver sección "Modo administrador" abajo).
 
 Un proyecto = un objeto. Un cliente = varios proyectos. **Un deployment
 sirve a un cliente** (ver sección "Modelo de despliegue" abajo).
@@ -79,6 +80,38 @@ por proyecto) y llama al `render()` correspondiente.
 `data.js`.** No se toca el resto del motor. Este es el patrón a seguir
 para cualquier futuro módulo del portal — evita duplicar lógica de
 layout, drag&drop o visibilidad, que ya está resuelta a nivel genérico.
+
+## Theme Builder (`THEME_SCHEMA` en `js/render.js`)
+
+Patrón declarativo, el mismo espíritu que `BLOCK_DEFS` pero para
+variables de tema en vez de módulos de contenido:
+
+```
+const THEME_SCHEMA = [
+  { group, key, label, cssVar, type, default, options?, min?, max?, unit? },
+  ...
+];
+```
+
+- `applyTheme()` recorre el esquema una vez y pisa cada `cssVar` en
+  `document.documentElement.style` con el valor guardado en
+  `client.theme[key]` (o `default` si no fue personalizado). Agregar
+  una variable de tema nueva = agregar una fila al esquema — no se
+  toca `applyTheme()`.
+- En `admin.js`, `buildThemeBuilder()` recorre el mismo esquema y
+  genera el control según `type` (`color` → input color, `select`/
+  `font` → `<select>`, `range` → slider) vía `renderThemeField()`,
+  agrupado por `group` (hoy: "Colores", "Tipografía"). Ningún campo del
+  Theme Builder tiene código de UI escrito a mano — todos salen del
+  esquema.
+- Incluye una tarjeta de vista previa en vivo (`.theme-preview`) dentro
+  del propio panel — usa las mismas variables CSS reales, así que
+  refleja los cambios al instante sin lógica extra (el panel no está
+  atenuado por el overlay, a diferencia del resto de la página detrás).
+- **Reutiliza variables existentes cuando ya existían** en vez de
+  duplicar: "Color de texto secundario" y "Color de bordes" escriben
+  directamente sobre `--rs-gray-500`/`--rs-gray-100`, que ya eran la
+  fuente única usada en toda la hoja de estilos.
 
 ## Modo administrador (`js/admin.js`)
 
@@ -114,16 +147,16 @@ layout, drag&drop o visibilidad, que ya está resuelta a nivel genérico.
   dispositivos, nuevo cliente): "Exportar JSON" y reemplazar
   manualmente el objeto en `js/data.js`.
 - Cubre hoy: reordenar/ocultar bloques (drag&drop), editar piezas de
-  contenido (modal), cambiar logo de proyecto y portada de cliente
-  (modal de imagen genérico, `openImageModal`, upload o URL), color de
-  marca (`primaryColor`, con preview en vivo), editar textos básicos
+  contenido (modal), cambiar logos/portada/favicon (modal de imagen
+  genérico, `openImageModal`, upload o URL), Theme Builder completo
+  (colores + tipografía, ver sección propia), editar textos básicos
   (nombre cliente, mensaje de bienvenida, aviso, nombre/estado/objetivo
   de cada proyecto) desde un panel lateral.
-- **No cubre** edición de listas (goals, roadmap, nextSteps,
+- **No cubre todavía** edición de listas (goals, roadmap, nextSteps,
   pendingMaterial, resources, documents, links, calendar, bitacora,
   upsells) desde la UI — esas se editan directamente en `data.js`. Es
-  una decisión de simplicidad, no una limitación técnica: evita
-  construir un editor de listas genérico antes de que haga falta.
+  el objetivo de la Fase 2 de la V2 (editor genérico de listas, ver
+  [PLAN_V2_CMS.md](PLAN_V2_CMS.md)) — no construido todavía.
 
 ## Modelo de despliegue: un cliente por sitio
 
@@ -133,10 +166,11 @@ el `README.md` original del proyecto). No hay selector de cliente, no
 hay login, no hay multi-tenancy: cada cliente tiene su propio deployment
 de Netlify.
 
-Esto es consistente con el alcance actual (una V1 para Juan Guzmán) pero
-**entra en tensión** con el pedido de que el Panel Administrador
-gestione "Clientes" en plural. Ver [DECISIONES.md](DECISIONES.md) —
-esa tensión está señalada como decisión pendiente, no resuelta.
+Esto ya fue evaluado explícitamente contra el pedido de que el Panel
+Administrador gestione "Clientes" en plural: se decidió mantener este
+modelo (un deployment por cliente) para la V1 y la V2. Ver
+[DECISIONES.md](DECISIONES.md) — no es una tensión pendiente, está
+resuelta.
 
 ## Frontend: sin framework
 
@@ -144,7 +178,9 @@ HTML generado por template strings + `innerHTML`. Sin JSX, sin Vue,
 sin build. `esc()` sanitiza todo texto insertado (usa
 `textContent`→`innerHTML` del propio DOM, no una librería). Iconos via
 Lucide (CDN, `data-lucide="nombre"` + `lucide.createIcons()`).
-Tipografía Google Fonts (DM Sans / DM Mono) por CDN.
+Tipografía Google Fonts por CDN — DM Sans/DM Mono (defaults) + Inter,
+Poppins y Manrope precargadas para el selector de fuente del Theme
+Builder (así elegir una no requiere inyectar un `<link>` en runtime).
 
 ## Versionado y deployment
 

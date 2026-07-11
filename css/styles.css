@@ -6,7 +6,7 @@
    ============================================================ */
 
 :root {
-  /* Color */
+  /* Color de marca — editable desde el Theme Builder del admin */
   --rs-black: #0a0a0a;
   --rs-ink: #141414;
   --rs-gray-900: #1c1c1e;
@@ -18,20 +18,34 @@
   --rs-white: #ffffff;
   --rs-red: #e02020;
   --rs-red-dim: #e0202018;
+  --rs-secondary: var(--rs-black);
+  --rs-background: var(--rs-white);
+  --rs-card: var(--rs-white);
+  --rs-button: var(--rs-black);
+  --rs-text-primary: var(--rs-black);
 
   /* Estado */
-  --status-active: #1fb463;
-  --status-active-bg: #1fb46318;
+  --status-success: #1fb463;
+  --status-success-bg: #1fb46318;
   --status-upcoming: #6e6e73;
   --status-upcoming-bg: #6e6e7318;
-  --status-review: #d69e2e;
-  --status-review-bg: #d69e2e18;
+  --status-warning: #d69e2e;
+  --status-warning-bg: #d69e2e18;
   --status-planning: #2f6fed;
   --status-planning-bg: #2f6fed18;
+  --status-error: #e5484d;
+  --status-error-bg: #e5484d18;
 
-  /* Tipografía */
+  /* Tipografía — editable desde el Theme Builder */
   --font-sans: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: "DM Mono", "SF Mono", ui-monospace, monospace;
+  --rs-font-size-title: 46px;
+  --rs-font-size-subtitle: 20px;
+  --rs-font-size-body: 16px;
+  --rs-font-weight-title: 700;
+  --rs-font-weight-body: 400;
+  --rs-line-height: 1.5;
+  --rs-letter-spacing: -0.02em;
 
   /* Espaciado */
   --space-1: 4px;
@@ -68,10 +82,11 @@ html {
 
 body {
   font-family: var(--font-sans);
-  background: var(--rs-white);
-  color: var(--rs-black);
-  line-height: 1.5;
-  font-size: 16px;
+  background: var(--rs-background);
+  color: var(--rs-text-primary);
+  line-height: var(--rs-line-height);
+  font-size: var(--rs-font-size-body);
+  font-weight: var(--rs-font-weight-body);
   min-height: 100vh;
 }
 
@@ -163,6 +178,13 @@ button {
   background: var(--rs-red);
 }
 
+.brand__logo {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  object-fit: cover;
+}
+
 .brand__client {
   color: var(--rs-gray-500);
   font-weight: 500;
@@ -183,7 +205,7 @@ button {
 }
 
 .back-link:hover {
-  color: var(--rs-black);
+  color: var(--rs-secondary);
 }
 
 /* ============================================================
@@ -231,9 +253,9 @@ button {
 }
 
 .hero__title {
-  font-size: clamp(32px, 4.5vw, 46px);
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-size: clamp(32px, 4.5vw, var(--rs-font-size-title));
+  font-weight: var(--rs-font-weight-title);
+  letter-spacing: var(--rs-letter-spacing);
   line-height: 1.1;
   margin-bottom: var(--space-4);
 }
@@ -324,7 +346,7 @@ button {
   border: 1px solid var(--rs-gray-100);
   border-radius: var(--radius-lg);
   padding: var(--space-8);
-  background: var(--rs-white);
+  background: var(--rs-card);
   transition: border-color var(--duration) var(--ease), transform var(--duration) var(--ease), box-shadow var(--duration) var(--ease);
   display: flex;
   flex-direction: column;
@@ -357,8 +379,8 @@ button {
 }
 
 .project-card__name {
-  font-size: 20px;
-  font-weight: 700;
+  font-size: var(--rs-font-size-subtitle);
+  font-weight: var(--rs-font-weight-title);
   letter-spacing: -0.01em;
   margin-top: var(--space-4);
 }
@@ -466,12 +488,12 @@ button {
 }
 
 .status-badge--active {
-  color: var(--status-active);
-  background: var(--status-active-bg);
+  color: var(--status-success);
+  background: var(--status-success-bg);
 }
 .status-badge--active .status-badge__dot {
-  background: var(--status-active);
-  box-shadow: 0 0 0 3px var(--status-active-bg);
+  background: var(--status-success);
+  box-shadow: 0 0 0 3px var(--status-success-bg);
   animation: pulse 2s infinite;
 }
 
@@ -484,11 +506,11 @@ button {
 }
 
 .status-badge--review {
-  color: var(--status-review);
-  background: var(--status-review-bg);
+  color: var(--status-warning);
+  background: var(--status-warning-bg);
 }
 .status-badge--review .status-badge__dot {
-  background: var(--status-review);
+  background: var(--status-warning);
 }
 
 .status-badge--planning {
@@ -511,7 +533,7 @@ button {
 }
 
 .btn--primary {
-  background: var(--rs-black);
+  background: var(--rs-button);
   color: var(--rs-white);
 }
 
@@ -521,12 +543,12 @@ button {
 
 .btn--ghost {
   background: transparent;
-  color: var(--rs-black);
+  color: var(--rs-text-primary);
   border: 1px solid var(--rs-gray-100);
 }
 
 .btn--ghost:hover {
-  border-color: var(--rs-black);
+  border-color: var(--rs-secondary);
 }
 
 .btn:active {
@@ -561,9 +583,11 @@ button {
 }
 
 .project-hero__title {
-  font-size: clamp(26px, 4vw, 34px);
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  /* Proporcional al título principal (34/46 ~ 0.74 en el diseño original)
+     para que ambos escalen juntos con un solo control de tamaño. */
+  font-size: clamp(26px, 4vw, calc(var(--rs-font-size-title) * 0.74));
+  font-weight: var(--rs-font-weight-title);
+  letter-spacing: var(--rs-letter-spacing);
 }
 
 .project-hero__objective {
@@ -664,8 +688,8 @@ button {
 /* Modificadores de color por tipo de evento — usados por la Bitácora,
    que reutiliza este mismo componente de timeline. */
 .roadmap__item--milestone .roadmap__dot {
-  border-color: var(--status-active);
-  background: var(--status-active);
+  border-color: var(--status-success);
+  background: var(--status-success);
 }
 .roadmap__item--delivery .roadmap__dot {
   border-color: var(--rs-red);
@@ -680,7 +704,7 @@ button {
   background: var(--rs-white);
 }
 
-.roadmap__item--milestone .roadmap__phase .icon { color: var(--status-active); }
+.roadmap__item--milestone .roadmap__phase .icon { color: var(--status-success); }
 .roadmap__item--delivery .roadmap__phase .icon { color: var(--rs-red); }
 .roadmap__item--material .roadmap__phase .icon { color: var(--status-planning); }
 .roadmap__item--note .roadmap__phase .icon { color: var(--rs-gray-300); }
@@ -877,8 +901,8 @@ button {
 }
 
 @keyframes pulse {
-  0%, 100% { box-shadow: 0 0 0 3px var(--status-active-bg); }
-  50% { box-shadow: 0 0 0 6px var(--status-active-bg); }
+  0%, 100% { box-shadow: 0 0 0 3px var(--status-success-bg); }
+  50% { box-shadow: 0 0 0 6px var(--status-success-bg); }
 }
 
 .stagger > * {
@@ -1075,6 +1099,10 @@ button {
   transform: translateX(-50%) translateY(0);
 }
 
+.admin-toast--error {
+  background: var(--status-error);
+}
+
 /* ============================================================
    BARRA DE CAMBIOS SIN GUARDAR
    ============================================================ */
@@ -1110,7 +1138,7 @@ button {
 }
 
 .save-bar__text .icon {
-  color: var(--status-review);
+  color: var(--status-warning);
   width: 16px;
   height: 16px;
 }
@@ -1143,7 +1171,7 @@ button {
   border: 1px solid var(--rs-gray-100);
   border-radius: var(--radius-lg);
   padding: var(--space-8);
-  background: var(--rs-white);
+  background: var(--rs-card);
   animation: fade-up var(--duration) var(--ease) both;
   transition: border-color var(--duration) var(--ease), opacity var(--duration) var(--ease), transform 120ms var(--ease);
 }
@@ -1443,7 +1471,7 @@ button {
 
 .cal-nav-btn:hover {
   background: var(--rs-gray-50);
-  color: var(--rs-black);
+  color: var(--rs-secondary);
 }
 
 .cal-legend {
@@ -1467,7 +1495,7 @@ button {
   display: inline-block;
 }
 
-.cal-dot--reunion, .cal-event--reunion { background: var(--status-review); }
+.cal-dot--reunion, .cal-event--reunion { background: var(--status-warning); }
 .cal-dot--publicacion, .cal-event--publicacion { background: var(--rs-red); }
 
 .cal-grid {
@@ -1572,4 +1600,62 @@ button {
 
 .piece-modal .admin-panel__body {
   overflow-y: auto;
+}
+
+/* ============================================================
+   THEME BUILDER (panel admin)
+   ============================================================ */
+
+.theme-preview {
+  border: 1px solid var(--rs-gray-100);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  margin-bottom: var(--space-6);
+  background: var(--rs-card);
+}
+
+.theme-preview__title {
+  font-family: var(--font-sans);
+  font-size: clamp(16px, 4vw, calc(var(--rs-font-size-title) * 0.5));
+  font-weight: var(--rs-font-weight-title);
+  color: var(--rs-text-primary);
+  letter-spacing: var(--rs-letter-spacing);
+  margin-bottom: var(--space-2);
+}
+
+.theme-preview__text {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--rs-gray-500);
+  line-height: var(--rs-line-height);
+  margin-bottom: var(--space-3);
+}
+
+/* Select y range genéricos — mismo look que .admin-field input/textarea */
+.admin-field select {
+  width: 100%;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--rs-gray-100);
+  border-radius: var(--radius-sm);
+  background: var(--rs-gray-50);
+}
+
+.admin-range-field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.admin-range-field input[type="range"] {
+  flex: 1;
+}
+
+.admin-range-field__value {
+  font-family: var(--font-mono), var(--font-sans);
+  font-size: 12px;
+  color: var(--rs-gray-500);
+  min-width: 42px;
+  text-align: right;
 }

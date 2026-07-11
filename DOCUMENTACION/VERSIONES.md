@@ -56,6 +56,20 @@ del orden de bloques) no incluida en este pase.
 - Con esto, la "Fase 5" mencionada en el plan de UX Premium queda
   resuelta (y ampliada a todo el admin, no solo el orden de bloques).
 
+## v0.5 — Portal Cliente V2, Fase 1: Theme Builder (2026-07-11)
+
+- Arranca la V2: panel de administración integral (CMS + Theme
+  Builder), pedida explícitamente como evolución de fase — ver
+  [ALCANCE.md](ALCANCE.md).
+- Fase 1 completa: identidad visual completa (11 colores + 8 variables
+  de tipografía) configurable desde el panel, generado desde un
+  esquema declarativo (`THEME_SCHEMA`) — no hay UI escrita a mano por
+  campo. Logo de cliente y favicon dinámico.
+- Fases 2 (editor genérico de listas), 3 (accesos rápidos en header) y
+  4 (sistema de diseño: radios, sombras, estilos de botón/tarjeta,
+  claro/oscuro) quedan pendientes — ver
+  [PLAN_V2_CMS.md](PLAN_V2_CMS.md).
+
 ## Deployment — 2026-07-11
 
 - Repo conectado a GitHub: `https://github.com/REELSUPRA/portal`

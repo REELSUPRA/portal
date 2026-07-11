@@ -3,6 +3,32 @@
 Registro cronológico de cambios, más granular que
 [VERSIONES.md](VERSIONES.md). Orden: más reciente arriba.
 
+## 2026-07-11 (Portal Cliente V2 — Fase 1: Theme Builder)
+
+- **Feature:** `THEME_SCHEMA` declarativo en `js/render.js` — 19
+  variables de tema (11 colores + 8 tipografía). `applyTheme()`
+  generalizado para leerlo, en vez de aplicar solo el color principal.
+- **Feature:** panel admin genera los 19 controles automáticamente
+  desde el esquema (`buildThemeBuilder()`/`renderThemeField()` +
+  `selectField()`/`rangeField()` nuevos en `js/admin.js`) — agregar una
+  variable de tema futura no requiere escribir UI nueva.
+- **Feature:** selector de fuente (DM Sans/Inter/Poppins/Manrope) con
+  vista previa en vivo dentro del propio panel.
+- **Feature:** logo de cliente (topbar) y favicon dinámico — mismo
+  modal de imagen genérico ya existente, dos usos más.
+- **Consolidación:** `client.primaryColor` migrado a
+  `client.theme.primaryColor` — una sola fuente de verdad de theming.
+- **Fix/mejora:** color de error conectado a los toasts de error que ya
+  existían (contraseña incorrecta, guardado fallido) en vez de ser un
+  campo sin efecto visible.
+- Congelado el alcance de la V2 en [ALCANCE.md](ALCANCE.md) — no
+  reabre CRM/Facturación/Métricas/Automatizaciones/IA, es sobre cómo se
+  administra el portal existente.
+- Ver detalle en [PLAN_V2_CMS.md](PLAN_V2_CMS.md).
+- Verificado con Chromium headless: 19 controles generados
+  correctamente, cambios en vivo, persistencia tras guardar+recargar
+  sin admin. Sin errores en la suite de regresión completa.
+
 ## 2026-07-11 (Guardado centralizado + persistencia)
 
 - **Feature:** capa de persistencia desacoplada `js/store.js`

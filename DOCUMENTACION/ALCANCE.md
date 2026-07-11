@@ -1,12 +1,31 @@
-# Alcance congelado — V1
+# Alcance congelado
 
 Última actualización: 2026-07-11.
 
-Este documento congela qué se construye **ahora** para la V1. Cambiarlo
-requiere una decisión consciente, no un agregado orgánico durante el
-desarrollo. Si algo no está en esta lista, no se construye todavía —
-va a [IDEAS.md](IDEAS.md) o a la sección "Después de la V1" de
-[ROADMAP.md](ROADMAP.md).
+Este documento congela qué se construye **ahora**. Cambiarlo requiere
+una decisión consciente, no un agregado orgánico durante el desarrollo.
+Si algo no está en esta lista, no se construye todavía — va a
+[IDEAS.md](IDEAS.md) o al roadmap correspondiente.
+
+## V1 — cerrada
+
+La V1 (Portal del Cliente + Panel Administrador simple, para entregar a
+Juan Guzmán) está cerrada y en producción. Su alcance queda registrado
+abajo tal como se congeló — no se toca retroactivamente.
+
+## V2 — en curso: Panel de administración integral (CMS + Theme Builder)
+
+Evolución consciente de fase, pedida explícitamente el 2026-07-11 bajo
+el título "Portal Cliente V2". Amplía deliberadamente lo que "V1
+simple" permitía — el objetivo pasa a ser que **casi todo el portal se
+administre desde el panel**, sin tocar `data.js`, HTML ni CSS. Ver
+[PLAN_V2_CMS.md](PLAN_V2_CMS.md) para el detalle completo y el estado
+de cada fase.
+
+Esto **no** reabre lo que sigue prohibido (ver más abajo) — CRM,
+Facturación, Métricas, Automatizaciones, IA e integraciones avanzadas
+siguen fuera de alcance. La V2 es sobre **cómo se administra** el
+portal existente, no sobre agregar esas capacidades de negocio.
 
 ## Dentro del alcance — Portal del Cliente
 

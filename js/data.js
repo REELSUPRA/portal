@@ -20,9 +20,14 @@
  *    visible para el cliente (más reciente primero).
  *  - upsells: mejoras / servicios adicionales que se le ofrecen
  *    al cliente, con un link de contacto (no es checkout).
- *  - client.coverImage / client.primaryColor: personalización de
- *    marca del portal (portada del hero y color de acento). Se
- *    editan desde el panel admin, igual que logoUrl.
+ *  - client.coverImage / client.logoUrl / client.faviconUrl:
+ *    personalización de marca (portada del hero, logo en el topbar,
+ *    ícono de la pestaña del navegador). Mismo patrón que logoUrl de
+ *    proyecto — URL o imagen subida desde el panel admin.
+ *  - client.theme: TODAS las variables del Theme Builder (colores,
+ *    tipografía). Ver THEME_SCHEMA en js/render.js — cualquier clave
+ *    que falte acá usa su valor por defecto de ahí. No hace falta
+ *    completarlas todas.
  *  - agency.adminPassphrase: contraseña simple para entrar al modo
  *    admin. No es seguridad real, solo evita el acceso accidental.
  *  - links[].style ("button" | "card" | "link") + links[].icon:
@@ -63,8 +68,16 @@ window.CLIENT_DATA = {
   client: {
     name: "Juan Guzmán",
     greetingEmoji: "⚡",
-    coverImage: null, // URL o imagen subida desde el panel admin (portada del hero)
-    primaryColor: "#e02020", // color de marca del cliente — cambia el acento de todo el portal
+    coverImage: null,  // portada del hero (URL o imagen subida)
+    logoUrl: null,     // logo del cliente en el topbar (reemplaza el punto rojo)
+    faviconUrl: null,  // ícono de la pestaña del navegador
+
+    // Theme Builder — ver THEME_SCHEMA en js/render.js para la lista
+    // completa de claves disponibles y sus valores por defecto.
+    theme: {
+      primaryColor: "#e02020",
+    },
+
     welcomeMessage:
       "Este es tu portal ReelSupra. Acá vas a encontrar el estado de cada proyecto, " +
       "qué sigue, y todo el material y los recursos que necesitás tener a mano — " +

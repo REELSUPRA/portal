@@ -6,13 +6,16 @@
   <title>Portal del Cliente — ReelSupra</title>
   <meta name="description" content="Portal del cliente ReelSupra: estado de proyectos, roadmap y recursos." />
 
-  <!-- Tipografía -->
+  <!-- Tipografía — fuentes disponibles para el selector del Theme Builder -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
 
   <!-- Íconos -->
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
+
+  <!-- Favicon dinámico: RS.applyBranding() lo actualiza si client.faviconUrl existe -->
+  <link rel="icon" id="favicon" href="data:," />
 
   <link rel="stylesheet" href="css/styles.css" />
 </head>
@@ -49,6 +52,7 @@
     function boot() {
       RSStore.hydrate().then(() => {
         RS.applyTheme();
+        RS.applyBranding();
         RSAdmin.detectAdminMode();
         RS.renderTopbar({ showBack: false });
         RS.renderAnnouncement();

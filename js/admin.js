@@ -73,7 +73,7 @@
     if (!expected) return true;
     const attempt = window.prompt("Contraseña de administrador:");
     if (attempt === expected) return true;
-    if (attempt !== null) showToast("Contraseña incorrecta");
+    if (attempt !== null) showToast("Contraseña incorrecta", "error");
     return false;
   }
 
@@ -116,9 +116,10 @@
     document.body.appendChild(toastEl);
   }
 
-  function showToast(message) {
+  function showToast(message, type = "default") {
     ensureToast();
     toastEl.textContent = message;
+    toastEl.classList.toggle("admin-toast--error", type === "error");
     toastEl.classList.add("is-visible");
     setTimeout(() => toastEl.classList.remove("is-visible"), 2200);
   }
@@ -150,7 +151,8 @@
     RSStore.save(window.CLIENT_DATA).then((ok) => {
       isDirty = false;
       if (saveBarEl) saveBarEl.classList.remove("is-open");
-      showToast(ok ? "Cambios guardados" : "No se pudo guardar — probá de nuevo");
+      if (ok) showToast("Cambios guardados");
+      else showToast("No se pudo guardar — probá de nuevo", "error");
     });
   }
 
@@ -187,11 +189,96 @@
     return wrap;
   }
 
+  function selectField(labelText, value, options, onChange) {
+    const wrap = document.createElement("div");
+    wrap.className = "admin-field";
+    const label = document.createElement("label");
+    label.textContent = labelText;
+    wrap.appendChild(label);
+    const select = document.createElement("select");
+    select.innerHTML = options.map((o) => `<option value="${o}">${o}</option>`).join("");
+    select.value = value;
+    select.addEventListener("change", (e) => { onChange(e.target.value); markDirty(); });
+    wrap.appendChild(select);
+    return wrap;
+  }
+
+  function rangeField(labelText, value, { min, max, step = 1, unit = "" }, onChange) {
+    const wrap = document.createElement("div");
+    wrap.className = "admin-field";
+    const label = document.createElement("label");
+    label.textContent = labelText;
+    wrap.appendChild(label);
+    const row = document.createElement("div");
+    row.className = "admin-range-field";
+    const input = document.createElement("input");
+    input.type = "range";
+    input.min = min;
+    input.max = max;
+    input.step = step;
+    input.value = value;
+    const out = document.createElement("span");
+    out.className = "admin-range-field__value";
+    out.textContent = `${value}${unit}`;
+    input.addEventListener("input", (e) => {
+      out.textContent = `${e.target.value}${unit}`;
+      onChange(e.target.value);
+      markDirty();
+    });
+    row.appendChild(input);
+    row.appendChild(out);
+    wrap.appendChild(row);
+    return wrap;
+  }
+
   function groupTitle(text) {
     const h = document.createElement("div");
     h.className = "admin-group-title";
     h.textContent = text;
     return h;
+  }
+
+  /* ---------------------------------------------------------- */
+  /* Theme Builder — generado desde RS.THEME_SCHEMA              */
+  /* ---------------------------------------------------------- */
+
+  // Un solo dispatcher por tipo de campo — agregar una variable de
+  // tema nueva en THEME_SCHEMA no requiere tocar esta función salvo
+  // que use un tipo de control que todavía no exista.
+  function renderThemeField(item, currentValue, onChange) {
+    if (item.type === "select" || item.type === "font") {
+      return selectField(item.label, currentValue, item.options, onChange);
+    }
+    if (item.type === "range") {
+      return rangeField(item.label, currentValue, item, onChange);
+    }
+    return field(item.label, currentValue, onChange, false, item.type);
+  }
+
+  function buildThemeBuilder(body, data) {
+    const theme = data.client.theme || (data.client.theme = {});
+
+    const preview = document.createElement("div");
+    preview.className = "theme-preview";
+    preview.innerHTML = `
+      <div class="theme-preview__title">Título de ejemplo</div>
+      <p class="theme-preview__text">Así se ve el texto de tu portal con esta configuración.</p>
+      <button class="btn btn--primary" type="button">Botón de ejemplo</button>`;
+    body.appendChild(preview);
+
+    const groups = {};
+    RS.THEME_SCHEMA.forEach((item) => { (groups[item.group] = groups[item.group] || []).push(item); });
+
+    Object.keys(groups).forEach((groupName) => {
+      body.appendChild(groupTitle(groupName));
+      groups[groupName].forEach((item) => {
+        const current = theme[item.key] !== undefined ? theme[item.key] : item.default;
+        body.appendChild(renderThemeField(item, current, (v) => {
+          theme[item.key] = v;
+          RS.applyTheme();
+        }));
+      });
+    });
   }
 
   /* ---------------------------------------------------------- */
@@ -233,10 +320,26 @@
     body.appendChild(groupTitle("Cliente"));
     body.appendChild(field("Nombre del cliente", data.client.name, (v) => (data.client.name = v)));
     body.appendChild(field("Mensaje de bienvenida", data.client.welcomeMessage, (v) => (data.client.welcomeMessage = v), true));
-    body.appendChild(field("Color principal del portal", data.client.primaryColor || "#e02020", (v) => {
-      data.client.primaryColor = v;
-      RS.applyTheme();
-    }, false, "color"));
+
+    const brandRow = document.createElement("div");
+    brandRow.style.cssText = "display:flex; gap:var(--space-2); margin-bottom:var(--space-4);";
+    const logoBtn = document.createElement("button");
+    logoBtn.type = "button";
+    logoBtn.className = "btn btn--ghost";
+    logoBtn.style.cssText = "flex:1; justify-content:center;";
+    logoBtn.innerHTML = `${RS.icon("image-plus")} Logo`;
+    logoBtn.addEventListener("click", openClientLogoModal);
+    const faviconBtn = document.createElement("button");
+    faviconBtn.type = "button";
+    faviconBtn.className = "btn btn--ghost";
+    faviconBtn.style.cssText = "flex:1; justify-content:center;";
+    faviconBtn.innerHTML = `${RS.icon("image-plus")} Favicon`;
+    faviconBtn.addEventListener("click", openFaviconModal);
+    brandRow.appendChild(logoBtn);
+    brandRow.appendChild(faviconBtn);
+    body.appendChild(brandRow);
+
+    buildThemeBuilder(body, data);
 
     body.appendChild(groupTitle("Aviso superior"));
     body.appendChild(checkboxField("Mostrar aviso al cliente", data.announcement.active, (v) => (data.announcement.active = v)));
@@ -538,6 +641,24 @@
       set: (v) => { window.CLIENT_DATA.client.coverImage = v; },
       onSaved: () => { RS.renderHero(); RS.hydrateIcons(); },
       removedMessage: "Portada quitada",
+    });
+  }
+
+  function openClientLogoModal() {
+    openImageModal({
+      title: "Logo del cliente",
+      set: (v) => { window.CLIENT_DATA.client.logoUrl = v; },
+      onSaved: () => { RS.renderTopbar({ showBack: !!document.getElementById("projectHero") }); RS.hydrateIcons(); },
+      removedMessage: "Logo quitado, volviendo al punto de marca",
+    });
+  }
+
+  function openFaviconModal() {
+    openImageModal({
+      title: "Favicon del portal",
+      set: (v) => { window.CLIENT_DATA.client.faviconUrl = v; },
+      onSaved: () => RS.applyBranding(),
+      removedMessage: "Favicon quitado",
     });
   }
 

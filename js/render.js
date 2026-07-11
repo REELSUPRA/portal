@@ -38,6 +38,32 @@ const RS = (() => {
     note: { icon: "message-square" },
   };
 
+  // Theme Builder — esquema declarativo. Agregar una variable de tema
+  // nueva es agregar una entrada acá; admin.js genera el control
+  // (color/select/font/range) y applyTheme() la aplica. No hace falta
+  // escribir UI nueva para cada campo.
+  const THEME_SCHEMA = [
+    { group: "Colores", key: "primaryColor", label: "Color principal", cssVar: "--rs-red", type: "color", default: "#e02020" },
+    { group: "Colores", key: "secondaryColor", label: "Color secundario", cssVar: "--rs-secondary", type: "color", default: "#0a0a0a" },
+    { group: "Colores", key: "backgroundColor", label: "Color de fondo", cssVar: "--rs-background", type: "color", default: "#ffffff" },
+    { group: "Colores", key: "cardColor", label: "Color de tarjetas", cssVar: "--rs-card", type: "color", default: "#ffffff" },
+    { group: "Colores", key: "buttonColor", label: "Color de botones", cssVar: "--rs-button", type: "color", default: "#0a0a0a" },
+    { group: "Colores", key: "textPrimaryColor", label: "Color de texto principal", cssVar: "--rs-text-primary", type: "color", default: "#0a0a0a" },
+    { group: "Colores", key: "textSecondaryColor", label: "Color de texto secundario", cssVar: "--rs-gray-500", type: "color", default: "#6e6e73" },
+    { group: "Colores", key: "borderColor", label: "Color de bordes", cssVar: "--rs-gray-100", type: "color", default: "#e9e9eb" },
+    { group: "Colores", key: "successColor", label: "Color de éxito", cssVar: "--status-success", type: "color", default: "#1fb463" },
+    { group: "Colores", key: "warningColor", label: "Color de advertencia", cssVar: "--status-warning", type: "color", default: "#d69e2e" },
+    { group: "Colores", key: "errorColor", label: "Color de error", cssVar: "--status-error", type: "color", default: "#e5484d" },
+    { group: "Tipografía", key: "fontFamily", label: "Fuente principal", cssVar: "--font-sans", type: "font", default: "DM Sans", options: ["DM Sans", "Inter", "Poppins", "Manrope"] },
+    { group: "Tipografía", key: "titleSize", label: "Tamaño del título", cssVar: "--rs-font-size-title", type: "range", unit: "px", min: 28, max: 56, step: 1, default: 46 },
+    { group: "Tipografía", key: "subtitleSize", label: "Tamaño de subtítulos", cssVar: "--rs-font-size-subtitle", type: "range", unit: "px", min: 14, max: 28, step: 1, default: 20 },
+    { group: "Tipografía", key: "bodySize", label: "Tamaño del texto", cssVar: "--rs-font-size-body", type: "range", unit: "px", min: 13, max: 19, step: 1, default: 16 },
+    { group: "Tipografía", key: "titleWeight", label: "Peso de títulos", cssVar: "--rs-font-weight-title", type: "select", options: ["400", "500", "600", "700", "800"], default: "700" },
+    { group: "Tipografía", key: "bodyWeight", label: "Peso del cuerpo", cssVar: "--rs-font-weight-body", type: "select", options: ["400", "500", "600"], default: "400" },
+    { group: "Tipografía", key: "lineHeight", label: "Altura de línea", cssVar: "--rs-line-height", type: "range", unit: "", min: 1.2, max: 1.9, step: 0.05, default: 1.5 },
+    { group: "Tipografía", key: "letterSpacing", label: "Espaciado de títulos", cssVar: "--rs-letter-spacing", type: "range", unit: "em", min: -0.04, max: 0.04, step: 0.005, default: -0.02 },
+  ];
+
   // Estado de navegación del calendario (mes que se está mostrando).
   const calendarState = { year: null, month: null };
 
@@ -90,16 +116,38 @@ const RS = (() => {
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   }
 
-  // Aplica el color de marca del cliente a las variables CSS que ya
-  // maneja todo el sistema de diseño — no crea un sistema de theming
-  // nuevo, solo pisa la variable existente en runtime.
+  // Recorre THEME_SCHEMA y pisa cada variable CSS con el valor guardado
+  // en client.theme (o su default si no fue personalizado). Agregar una
+  // variable de tema nueva no toca esta función — solo THEME_SCHEMA.
   function applyTheme() {
-    const color = window.CLIENT_DATA && window.CLIENT_DATA.client && window.CLIENT_DATA.client.primaryColor;
-    if (!color) return;
-    const dim = hexToRgba(color, 0.09);
+    const theme = (window.CLIENT_DATA && window.CLIENT_DATA.client && window.CLIENT_DATA.client.theme) || {};
     const root = document.documentElement.style;
-    root.setProperty("--rs-red", color);
-    if (dim) root.setProperty("--rs-red-dim", dim);
+
+    THEME_SCHEMA.forEach((item) => {
+      const raw = theme[item.key];
+      const value = raw === undefined || raw === null || raw === "" ? item.default : raw;
+      if (value === undefined || value === null || value === "") return;
+
+      if (item.key === "fontFamily") {
+        root.setProperty(item.cssVar, `"${value}", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`);
+        return;
+      }
+
+      root.setProperty(item.cssVar, item.unit ? `${value}${item.unit}` : String(value));
+
+      if (item.cssVar === "--rs-red") {
+        const dim = hexToRgba(value, 0.09);
+        if (dim) root.setProperty("--rs-red-dim", dim);
+      }
+    });
+  }
+
+  // Favicon dinámico — separado de applyTheme() porque no es una
+  // variable CSS, es un atributo de un <link> del <head>.
+  function applyBranding() {
+    const client = (window.CLIENT_DATA && window.CLIENT_DATA.client) || {};
+    const favicon = document.getElementById("favicon");
+    if (favicon) favicon.href = client.faviconUrl || "data:,";
   }
 
   function parseISODate(str) {
@@ -123,9 +171,13 @@ const RS = (() => {
     const el = document.getElementById("topbar");
     if (!el) return;
 
+    const brandMark = data.client.logoUrl
+      ? `<img src="${esc(data.client.logoUrl)}" alt="" class="brand__logo" />`
+      : `<span class="brand__dot"></span>`;
+
     const left = showBack
       ? `<a class="back-link" href="index.html">${icon("arrow-left")} Portal</a>`
-      : `<div class="brand"><span class="brand__dot"></span>${esc(data.agency.name)}
+      : `<div class="brand">${brandMark}${esc(data.agency.name)}
            <span class="brand__client">${esc(data.client.name)}</span></div>`;
 
     const adminBadge = isAdmin()
@@ -564,10 +616,10 @@ const RS = (() => {
   }
 
   return {
-    esc, icon, isAdmin, applyTheme,
+    esc, icon, isAdmin, applyTheme, applyBranding,
     renderTopbar, renderAnnouncement, renderHero, renderProjectGrid,
     renderProjectDetail, renderBlocks, navigateCalendar,
     getProjectFromURL, hydrateIcons, projectAvatar,
-    BLOCK_DEFS, STATUS_LABEL,
+    BLOCK_DEFS, STATUS_LABEL, THEME_SCHEMA,
   };
 })();
