@@ -3,6 +3,21 @@
 Registro cronológico de cambios, más granular que
 [VERSIONES.md](VERSIONES.md). Orden: más reciente arriba.
 
+## 2026-07-11 (UX Premium — Fase 3)
+
+- **Feature:** Bitácora convertida en timeline visual — reutiliza el
+  componente `.roadmap` existente en vez de la lista plana anterior.
+  Cada entrada tiene un `type` (`milestone`/`delivery`/`material`/
+  `note`) con ícono y color de punto propio.
+- **CSS:** 4 modificadores nuevos de color de punto
+  (`.roadmap__item--milestone/--delivery/--material/--note`), sin
+  tocar los modificadores que usa el Roadmap real. `.roadmap__phase`
+  pasa a flex para poder llevar ícono + texto.
+- **Data:** `bitacora[].type` agregado en ambos proyectos de ejemplo.
+- Ver detalle en [PLAN_UX_PREMIUM.md](PLAN_UX_PREMIUM.md#fase-3--experiencia-viva-2026-07-11--✅-implementada).
+- Verificado con Chromium headless: sin errores; sin regresión visual
+  en el Roadmap.
+
 ## 2026-07-11 (UX Premium — Fase 2)
 
 - **Feature:** barra de progreso general del proyecto

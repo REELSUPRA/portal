@@ -1,6 +1,6 @@
 # Plan — Experiencia Premium del Portal del Cliente
 
-Estado: **Fases 1 y 2 implementadas** (2026-07-11). Fases 3-4 pendientes. Este
+Estado: **Fases 1, 2 y 3 implementadas** (2026-07-11). Fase 4 pendiente. Este
 documento responde al pedido
 de mejora visual/UX profunda sin cambiar la arquitectura de base. Se
 actualiza a "implementado" ítem por ítem en [CHANGELOG.md](CHANGELOG.md)
@@ -313,3 +313,23 @@ de passphrase para el admin. Implementado en Fase 1.
 - Verificado con Chromium headless en las 5 vistas de regresión: sin
   errores. Confirmado visualmente que el layout de tarjetas y el hero
   no se rompieron.
+
+### Fase 3 — Experiencia viva (2026-07-11) — ✅ implementada
+
+- La Bitácora (`blockBitacora`) dejó de usar `.upcoming-list` (lista
+  plana) y ahora reutiliza literalmente el componente de timeline del
+  Roadmap (`.roadmap` / `.roadmap__item` / `.roadmap__dot` /
+  `.roadmap__phase` / `.roadmap__tag`) — la misma línea vertical con
+  puntos que ya existía, cero componente nuevo.
+- Cada entrada de bitácora suma un `type` (`milestone` | `delivery` |
+  `material` | `note`) que define ícono y color del punto —
+  4 modificadores CSS nuevos (`.roadmap__item--milestone`, etc.),
+  agregados sin tocar los modificadores que ya usaba el Roadmap real
+  (`in-progress`/`upcoming`/`done`), así que ese bloque no cambió.
+  `.roadmap__phase` pasó a `display:flex` para poder llevar ícono +
+  texto — cambio inocuo para el Roadmap, que solo tiene texto ahí.
+- Datos de ejemplo actualizados en ambos proyectos con los tres tipos
+  (`milestone`, `delivery`, `material`) para poder verlo funcionando.
+- Verificado con Chromium headless: sin errores; confirmado
+  visualmente que el Roadmap (que comparte el componente) no tuvo
+  ninguna regresión.

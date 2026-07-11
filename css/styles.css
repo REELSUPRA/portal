@@ -661,7 +661,35 @@ button {
   background: var(--rs-red);
 }
 
+/* Modificadores de color por tipo de evento — usados por la Bitácora,
+   que reutiliza este mismo componente de timeline. */
+.roadmap__item--milestone .roadmap__dot {
+  border-color: var(--status-active);
+  background: var(--status-active);
+}
+.roadmap__item--delivery .roadmap__dot {
+  border-color: var(--rs-red);
+  background: var(--rs-red);
+}
+.roadmap__item--material .roadmap__dot {
+  border-color: var(--status-planning);
+  background: var(--status-planning);
+}
+.roadmap__item--note .roadmap__dot {
+  border-color: var(--rs-gray-300);
+  background: var(--rs-white);
+}
+
+.roadmap__item--milestone .roadmap__phase .icon { color: var(--status-active); }
+.roadmap__item--delivery .roadmap__phase .icon { color: var(--rs-red); }
+.roadmap__item--material .roadmap__phase .icon { color: var(--status-planning); }
+.roadmap__item--note .roadmap__phase .icon { color: var(--rs-gray-300); }
+.roadmap__phase .icon { width: 16px; height: 16px; flex-shrink: 0; }
+
 .roadmap__phase {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   font-size: 15px;
   font-weight: 700;
   margin-bottom: var(--space-1);

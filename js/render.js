@@ -31,6 +31,12 @@ const RS = (() => {
     done: "status-badge--upcoming",
   };
   const ROADMAP_TAG = { "in-progress": "En curso", upcoming: "Próxima etapa", done: "Completada" };
+  const BITACORA_TYPE = {
+    milestone: { icon: "flag" },
+    delivery: { icon: "film" },
+    material: { icon: "inbox" },
+    note: { icon: "message-square" },
+  };
 
   // Estado de navegación del calendario (mes que se está mostrando).
   const calendarState = { year: null, month: null };
@@ -318,6 +324,9 @@ const RS = (() => {
 
   // ----- Bitácora -----
 
+  // La Bitácora reutiliza el mismo componente visual de timeline que
+  // ya existe para el Roadmap (línea + punto) — solo agrega un ícono
+  // por tipo de evento en vez del estado in-progress/upcoming/done.
   function blockBitacora(project) {
     const entries = (project.bitacora || [])
       .map((e) => ({ ...e, dateObj: parseISODate(e.date) }))
@@ -326,14 +335,15 @@ const RS = (() => {
 
     if (!entries.length) return `<p class="empty-hint">Todavía no hay novedades registradas.</p>`;
 
-    return `<ul class="upcoming-list">${entries.map((e) => `
-      <li>
-        <span class="calendar-date calendar-date--sm">${e.dateObj.getDate()}</span>
-        <div class="upcoming-list__info">
-          <div class="upcoming-list__title">${esc(e.text)}</div>
-          <span class="upcoming-list__note">${formatDateHuman(e.dateObj)}</span>
-        </div>
-      </li>`).join("")}</ul>`;
+    return `<div class="roadmap">${entries.map((e) => {
+      const type = BITACORA_TYPE[e.type] ? e.type : "note";
+      return `
+      <div class="roadmap__item roadmap__item--${type}">
+        <span class="roadmap__dot"></span>
+        <div class="roadmap__phase">${icon(BITACORA_TYPE[type].icon)}${esc(e.text)}</div>
+        <span class="roadmap__tag">${esc(formatDateHuman(e.dateObj))}</span>
+      </div>`;
+    }).join("")}</div>`;
   }
 
   // ----- Mejoras disponibles (Upsells) -----

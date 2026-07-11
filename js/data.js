@@ -169,9 +169,12 @@ window.CLIENT_DATA = {
         { date: "2026-07-15", label: "Revisión mensual de resultados" },
       ],
 
+      // type: "milestone" | "delivery" | "material" | "note" — define
+      // el ícono y color del punto en el timeline de la Bitácora.
       bitacora: [
-        { date: "2026-07-08", text: "Primer video del mes entregado y listo para publicar." },
-        { date: "2026-07-04", text: "Arranca producción con material grabado antes del viaje de Juan." },
+        { date: "2026-07-10", type: "material", text: "Nuevas fotos de la propiedad recibidas de Juan." },
+        { date: "2026-07-08", type: "delivery", text: "Primer video del mes entregado y listo para publicar." },
+        { date: "2026-07-04", type: "milestone", text: "Arranca producción con material grabado antes del viaje de Juan." },
       ],
 
       upsells: [
@@ -283,8 +286,8 @@ window.CLIENT_DATA = {
       ],
 
       bitacora: [
-        { date: "2026-07-09", text: "Primer before & after entregado, con subtítulos en inglés." },
-        { date: "2026-07-04", text: "Arranca producción con material grabado antes del viaje de Juan." },
+        { date: "2026-07-09", type: "delivery", text: "Primer before & after entregado, con subtítulos en inglés." },
+        { date: "2026-07-04", type: "milestone", text: "Arranca producción con material grabado antes del viaje de Juan." },
       ],
 
       upsells: [
