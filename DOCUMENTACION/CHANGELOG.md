@@ -3,6 +3,17 @@
 Registro cronológico de cambios, más granular que
 [VERSIONES.md](VERSIONES.md). Orden: más reciente arriba.
 
+## 2026-07-11 (continuación)
+
+- **Decisión de arquitectura resuelta:** "Clientes" en el Panel
+  Administrador = un deployment por cliente (ver
+  [DECISIONES.md](DECISIONES.md)). Portal del Cliente y Panel
+  Administrador quedan al 100% del alcance V1 definido en
+  [ALCANCE.md](ALCANCE.md).
+- **Feature:** switch "Mostrar aviso al cliente" en el panel admin
+  (`js/admin.js`: `checkboxField` + control sobre
+  `data.announcement.active`; `css/styles.css`: `.admin-checkbox-field`).
+
 ## 2026-07-11
 
 - **Docs:** creada la estructura completa de `DOCUMENTACION/` (VISION,

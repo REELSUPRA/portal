@@ -56,11 +56,9 @@ defecto es **enlazar una herramienta externa que ya la resuelve**, no
 construirla dentro del portal. Esa es la filosofía "centralizar sin
 duplicar" descrita en [VISION.md](VISION.md).
 
-## Multi-cliente: pendiente de decisión
+## Multi-cliente: decidido
 
-El Panel Administrador pide gestión de "Clientes" (plural), pero la
-arquitectura actual es **un deployment = un cliente** (ver
-[ARQUITECTURA.md](ARQUITECTURA.md) y [DECISIONES.md](DECISIONES.md)).
-Extender esto a multi-cliente en un solo deployment es un cambio de
-arquitectura de fondo, no una tarea chica — está señalado como decisión
-pendiente, no resuelto por defecto.
+El Panel Administrador gestiona "Clientes" bajo el modelo **un
+deployment = un cliente** (decisión del 2026-07-11, ver
+[DECISIONES.md](DECISIONES.md)). No se construye multi-tenancy en la
+V1.

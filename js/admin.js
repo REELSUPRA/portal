@@ -101,6 +101,18 @@
     return wrap;
   }
 
+  function checkboxField(labelText, checked, onChange) {
+    const wrap = document.createElement("label");
+    wrap.className = "admin-checkbox-field";
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.checked = !!checked;
+    input.addEventListener("change", (e) => onChange(e.target.checked));
+    wrap.appendChild(input);
+    wrap.appendChild(document.createTextNode(labelText));
+    return wrap;
+  }
+
   function groupTitle(text) {
     const h = document.createElement("div");
     h.className = "admin-group-title";
@@ -149,6 +161,7 @@
     body.appendChild(field("Mensaje de bienvenida", data.client.welcomeMessage, (v) => (data.client.welcomeMessage = v), true));
 
     body.appendChild(groupTitle("Aviso superior"));
+    body.appendChild(checkboxField("Mostrar aviso al cliente", data.announcement.active, (v) => (data.announcement.active = v)));
     body.appendChild(field("Texto del aviso", data.announcement.text, (v) => (data.announcement.text = v), true));
 
     data.projects.forEach((p, i) => {

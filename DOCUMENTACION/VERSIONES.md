@@ -15,12 +15,18 @@ Primer estado estable versionado del proyecto.
 - Control de versiones inicializado (`git init` + commit baseline).
 - Commit: `7e49cc4`.
 
-## v0.2 — Módulos Bitácora y Upsells (en curso)
+## v0.2 — Portal del Cliente y Panel Administrador completos según alcance V1
 
 - Agrega los dos módulos que faltaban para cubrir el alcance congelado
   del Portal del Cliente: Bitácora y Mejoras disponibles (Upsells).
 - Estructura de documentación (`DOCUMENTACION/`) creada y mantenida
   desde esta versión en adelante.
-- Pendiente antes de considerarla V1 completa: decisión de arquitectura
-  sobre "Clientes" en el Panel Administrador (ver
-  [DECISIONES.md](DECISIONES.md)) y datos reales de Juan Guzmán.
+- Resuelta la decisión de arquitectura sobre "Clientes" en el Panel
+  Administrador: un deployment por cliente (ver
+  [DECISIONES.md](DECISIONES.md)). Agregado el switch de
+  activar/desactivar el aviso superior, único control que faltaba en
+  esa sección.
+- Con esto, Portal del Cliente y Panel Administrador cubren el 100% del
+  alcance definido en [ALCANCE.md](ALCANCE.md) para la V1.
+- Pendiente antes de considerarla V1 entregable: datos reales de Juan
+  Guzmán (`resources`, `documents`, `links` siguen con placeholders).

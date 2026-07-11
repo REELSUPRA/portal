@@ -791,6 +791,21 @@ button {
   margin-bottom: var(--space-4);
 }
 
+.admin-checkbox-field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--rs-gray-500);
+  margin-bottom: var(--space-3);
+  cursor: pointer;
+}
+
+.admin-checkbox-field input {
+  accent-color: var(--rs-red);
+}
+
 .admin-field label {
   display: block;
   font-size: 12px;

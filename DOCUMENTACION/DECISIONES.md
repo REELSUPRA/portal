@@ -55,28 +55,33 @@ al producto.
 
 ---
 
-## Pendiente — Multi-cliente en el Panel Administrador
+## 2026-07-11 — Resuelto: un cliente por deployment
 
 **Contexto:** el alcance de la V1 pide que el Panel Administrador
 gestione "Clientes" (plural). La arquitectura actual es un deployment
-por cliente (ver [ARQUITECTURA.md](ARQUITECTURA.md)) — no existe hoy un
-selector de cliente ni un modelo de datos que contemple más de un
-cliente por instancia.
+por cliente (ver [ARQUITECTURA.md](ARQUITECTURA.md)) — no existía un
+selector de cliente ni un modelo de datos que contemplara más de un
+cliente por instancia. Se presentaron dos opciones (mantener el modelo
+actual vs. rediseñar a multi-cliente en un solo deployment).
 
-**Por qué está abierta:** resolver esto en cualquier dirección es un
-cambio de arquitectura de fondo:
+**Decisión:** mantener **un cliente por deployment**. "Gestión de
+clientes" en el Panel Administrador significa editar los datos del
+cliente de ese sitio (nombre, mensaje de bienvenida, aviso superior) —
+funcionalidad que ya existía en el panel lateral (`js/admin.js`,
+sección "Cliente"). No se rediseña el modelo de datos.
 
-- **Opción A — mantener un deployment por cliente.** "Gestión de
-  clientes" en el admin se reduce a editar los datos del cliente actual
-  (ya cubierto). Más simple, consistente con cómo está armado hoy y con
-  el README original. Escala mal si ReelSupra termina con muchos
-  clientes y quiere administrarlos desde un solo lugar.
-- **Opción B — un deployment multi-cliente.** Requiere rediseñar el
-  modelo de datos (`CLIENT_DATA` pasa a ser una lista de clientes),
-  ruteo (`?client=X&project=Y`), y un nivel de navegación nuevo en el
-  admin. Más alineado con "gestión de clientes" tomado literalmente,
-  pero es trabajo considerable y no es necesario para entregar la V1 a
-  Juan Guzmán (un solo cliente).
+**Por qué:** la V1 es para un solo cliente (Juan Guzmán); un modelo
+multi-cliente es trabajo y riesgo de arquitectura innecesarios para ese
+objetivo, y contradice "no funcionalidades complejas". Si ReelSupra
+suma clientes, cada uno tiene su propio deployment (ya documentado en
+el README original como forma de reutilización).
 
-**Estado:** no resuelto. Señalado explícitamente para decisión del
-responsable del producto antes de construir nada en esa dirección.
+**Consecuencia:** se agregó al panel el único control que faltaba para
+que la sección "Cliente" fuera completa: un switch para activar/
+desactivar el aviso superior (antes solo se podía editar el texto, no
+mostrarlo/ocultarlo sin tocar `data.js`).
+
+**Si en el futuro se necesita multi-cliente real:** queda documentada
+la opción B descartada acá — rediseñar `CLIENT_DATA` como lista de
+clientes, agregar ruteo (`?client=X&project=Y`) y un listado/selector en
+el admin. No se construye hasta que haya una razón concreta.

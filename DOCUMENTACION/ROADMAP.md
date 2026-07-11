@@ -26,14 +26,14 @@
 
 - [x] Proyectos: alta manual (vía `data.js`), edición de campos básicos
 - [x] Organización: orden y visibilidad de módulos por proyecto (drag&drop)
-- [x] Edición rápida: piezas de contenido, logo, textos básicos
-- [ ] Clientes (plural) — **bloqueado por decisión de arquitectura**,
-      ver [DECISIONES.md](DECISIONES.md)
+- [x] Edición rápida: piezas de contenido, logo, textos básicos, switch
+      de aviso superior
+- [x] Clientes — modelo "un deployment por cliente" (ver
+      [DECISIONES.md](DECISIONES.md)); gestión de cliente vía panel
+      lateral existente
 
 ### Antes de dar la V1 por cerrada
 
-- [ ] Decidir modelo de "Clientes" en el admin (única tarea que falta
-      para poder decir que el Panel Administrador cubre su alcance)
 - [ ] Completar datos reales de Juan Guzmán (`resources`, `documents`,
       `links` en `data.js` tienen placeholders `url: "#"` — depende de
       material que solo la agencia/cliente puede proveer)
