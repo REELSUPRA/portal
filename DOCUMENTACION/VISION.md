@@ -48,6 +48,12 @@ Explícitamente, y hasta nuevo aviso:
 Ver [ALCANCE.md](ALCANCE.md) para el detalle congelado de qué entra y
 qué no entra en la V1.
 
+## Deployment
+
+Producción: **https://portalreelsupra.netlify.app/** (Netlify, deploy
+automático desde `main` en `https://github.com/REELSUPRA/portal`).
+Modo administrador vía `/admin`, `?admin=true` o `Ctrl/Cmd+Shift+A`.
+
 ## Prioridad actual
 
 Terminar una **V1 profesional para entregar a Juan Guzmán**, con dos

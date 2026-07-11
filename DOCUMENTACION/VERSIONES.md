@@ -29,4 +29,14 @@ Primer estado estable versionado del proyecto.
 - Con esto, Portal del Cliente y Panel Administrador cubren el 100% del
   alcance definido en [ALCANCE.md](ALCANCE.md) para la V1.
 - Pendiente antes de considerarla V1 entregable: datos reales de Juan
-  Guzmán (`resources`, `documents`, `links` siguen con placeholders).
+  Guzmán (`resources`, `documents`, `links` siguen con placeholders) —
+  el cliente/agencia los completa directamente en `js/data.js`.
+
+## Deployment — 2026-07-11
+
+- Repo conectado a GitHub: `https://github.com/REELSUPRA/portal`
+  (rama `main`).
+- Netlify conectado al repo, deploy automático en cada push.
+- **Producción: https://portalreelsupra.netlify.app/**
+- Verificado sin errores (portal, detalle de proyecto, `/admin`) contra
+  la URL de producción.

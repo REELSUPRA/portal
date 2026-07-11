@@ -3,6 +3,16 @@
 Registro cronológico de cambios, más granular que
 [VERSIONES.md](VERSIONES.md). Orden: más reciente arriba.
 
+## 2026-07-11 (deployment)
+
+- Repo conectado a `https://github.com/REELSUPRA/portal` (rama `main`,
+  push inicial de los 3 commits existentes).
+- Netlify conectado al repo — deploy automático activo.
+- **Sitio en producción: https://portalreelsupra.netlify.app/**
+- Verificado con Chromium headless contra la URL real: portal, detalle
+  de proyecto y redirect `/admin` — sin errores de consola, sin
+  requests fallidos.
+
 ## 2026-07-11 (continuación)
 
 - **Decisión de arquitectura resuelta:** "Clientes" en el Panel

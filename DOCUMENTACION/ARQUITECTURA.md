@@ -114,7 +114,10 @@ sin build. `esc()` sanitiza todo texto insertado (usa
 Lucide (CDN, `data-lucide="nombre"` + `lucide.createIcons()`).
 Tipografía Google Fonts (DM Sans / DM Mono) por CDN.
 
-## Versionado
+## Versionado y deployment
 
-Git local (`git init` inicializado el 2026-07-11). Sin remoto configurado
-todavía. Ver [VERSIONES.md](VERSIONES.md).
+Git local (`git init` el 2026-07-11), remoto en
+`https://github.com/REELSUPRA/portal` (rama `main`). Netlify conectado
+al repo con deploy automático en cada push — sin build command, publish
+directory = raíz. Producción: **https://portalreelsupra.netlify.app/**.
+Ver [VERSIONES.md](VERSIONES.md).
