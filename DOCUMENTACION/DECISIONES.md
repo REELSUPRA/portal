@@ -211,5 +211,12 @@ otro, como se documentó desde el principio). Verificado contra el
 proyecto real: lectura pública funciona, una escritura sin sesión
 admin fue rechazada por RLS (prueba real, no solo inspección de
 políticas), el portal carga los datos reales en desktop y mobile sin
-errores. Detalle completo en
-[PLAN_MIGRACION_SUPABASE.md](PLAN_MIGRACION_SUPABASE.md).
+errores.
+
+**Migración cerrada (2026-07-12):** el propio admin confirmó en
+producción, con sus credenciales reales, el ciclo completo: login →
+editar un dato → guardar → recargar en modo cliente → abrir desde
+otro dispositivo — el cambio se vio en los 5 pasos. Esto confirma en
+la práctica el objetivo que disparó la migración: un cambio guardado
+desde un dispositivo ya se ve desde cualquier otro. Detalle completo
+en [PLAN_MIGRACION_SUPABASE.md](PLAN_MIGRACION_SUPABASE.md).

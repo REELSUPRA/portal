@@ -1,12 +1,9 @@
 # Plan — Migración a Supabase (V3, arquitectura de datos)
 
-Estado: **cutover a producción realizado (2026-07-12).**
-`js/store.supabase.js` está conectado en `index.html`/`project.html`;
-el login de admin es real (Supabase Auth). Verificado contra el
-proyecto real: lectura pública, RLS bloqueando escritura sin sesión,
-portal completo en desktop/mobile sin errores. Queda un solo punto sin
-verificar — ver "Pendiente" al final — porque requiere la contraseña
-real del admin, que no corresponde compartir en el chat.
+Estado: **migración cerrada (2026-07-12) — verificada de punta a
+punta con el admin real, en producción.** `js/store.supabase.js` es
+la fuente de datos; el login de admin es real (Supabase Auth).
+`localStorage` dejó de ser el origen de cualquier dato del portal.
 
 ## 0. Por qué este documento no termina en "listo, ya está en producción"
 
@@ -305,24 +302,36 @@ En este orden exacto — cada paso depende del anterior:
 - Login con credenciales incorrectas contra Supabase Auth real:
   rechazado correctamente, toast de error, no se activa el modo admin.
 
-## Pendiente
+## Verificación end-to-end final (2026-07-12) — hecha por el admin real
 
-1. **Login exitoso + guardado end-to-end con las credenciales reales
-   del admin.** No es verificable por mí sin su contraseña real (no
-   corresponde pedirla ni compartirla en el chat). Paso sugerido para
-   el admin: entrar a `/admin`, loguearse con el email/contraseña que
-   ya creó, confirmar que el panel abre, editar algo chico (ej. un
-   texto), guardar, y volver a cargar el portal desde **otro
-   navegador o dispositivo** — ahí se cierra el objetivo original de
-   esta migración.
-2. **Imágenes a Storage** (sección 6 de este plan) — todavía no
+El único punto que yo no podía probar sin su contraseña real quedó
+confirmado directamente por el admin, en producción
+(`portalreelsupra.netlify.app`), paso por paso:
+
+1. Login con el email/contraseña real creado en Supabase Auth → el
+   panel "Modo administrador" abrió correctamente.
+2. Edición de un dato real (mensaje de bienvenida).
+3. "Guardar cambios" → toast de éxito, sin errores.
+4. Recarga de la página en modo cliente (sin `?admin=true`) → el
+   cambio seguía ahí.
+5. Apertura desde otro dispositivo (celular, nunca tuvo `localStorage`
+   de este proyecto) → el cambio se veía igual.
+
+**Con esto, el objetivo que disparó toda esta migración —"un cambio
+guardado desde un dispositivo se ve desde cualquier otro"— está
+confirmado en producción, no solo en teoría.** Se dio por cerrada la
+migración.
+
+## Pendiente (fuera del alcance de "cerrar la migración" — mejoras futuras)
+
+1. **Imágenes a Storage** (sección 6 de este plan) — todavía no
    implementado; los logos/portada siguen guardándose en base64
    dentro de `CLIENT_DATA` (ya redimensionados a 1280px desde la fase
-   anterior, así que no rompen `localStorage` ni son gigantes, pero no
-   están en los buckets de Storage todavía).
-3. **"Exportar JSON"** sigue en el panel — no se quitó todavía (no era
-   necesario para el cutover de lectura/login; se puede sacar en
+   anterior, así que no rompen nada ni son gigantes, pero no están en
+   los buckets de Storage todavía).
+2. **"Exportar JSON"** sigue en el panel — no se quitó todavía (no era
+   necesario para el cierre de esta migración; se puede sacar en
    cualquier momento sin riesgo).
-4. La decisión de producto "un cliente por deployment vs. un portal
+3. La decisión de producto "un cliente por deployment vs. un portal
    multi-cliente" (ver [DECISIONES.md](DECISIONES.md)) sigue abierta —
    el esquema soporta cualquiera de las dos.

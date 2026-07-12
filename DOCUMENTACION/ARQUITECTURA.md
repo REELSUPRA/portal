@@ -259,10 +259,11 @@ escritura sin sesión admin fue rechazada por RLS (probado con un
 fallidos, con `window.RS_SUPABASE_OFFLINE` en `false` (confirmando que
 no cayó al fallback). El login de admin (modal nuevo, ver abajo) fue
 probado contra Supabase Auth real con credenciales incorrectas
-(rechazadas correctamente); el login con las credenciales reales del
-admin y el guardado end-to-end quedan para que el propio admin los
-confirme una vez (ver "Pendiente" en el plan) — no es algo que se
-pueda probar sin su contraseña real, por diseño.
+(rechazadas correctamente) — y el propio admin confirmó, en
+producción, el ciclo completo con sus credenciales reales: login →
+editar → guardar → recargar en modo cliente → abrir desde otro
+dispositivo. Los 5 pasos funcionaron. **Migración cerrada
+(2026-07-12).**
 
 ## Modo administrador (`js/admin.js`)
 

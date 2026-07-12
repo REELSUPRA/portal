@@ -3,6 +3,28 @@
 Registro cronológico de cambios, más granular que
 [VERSIONES.md](VERSIONES.md). Orden: más reciente arriba.
 
+## 2026-07-12 (Migración a Supabase — cierre, verificación end-to-end)
+
+El propio admin corrió la prueba de punta a punta en producción
+(`portalreelsupra.netlify.app`), con sus credenciales reales — el
+único paso que no se podía verificar sin su contraseña:
+
+1. Login real (email + contraseña) → panel "Modo administrador" abrió.
+2. Editó el mensaje de bienvenida.
+3. "Guardar cambios" → toast de éxito.
+4. Recargó la página en modo cliente (sin `?admin=true`) → el cambio
+   seguía ahí.
+5. Abrió el portal desde el celular (nunca tuvo `localStorage` de este
+   proyecto) → el cambio se veía igual.
+
+**Los 5 pasos funcionaron sin ningún problema que corregir.** Con
+esto, el objetivo original de la migración —que un cambio guardado se
+vea desde cualquier dispositivo— queda confirmado en producción, no
+solo en el código. Se da por **cerrada la migración a Supabase**. Lo
+que queda (imágenes a Storage, sacar "Exportar JSON", la decisión de
+producto sobre multi-cliente) son mejoras futuras, no parte de este
+cierre — ver [PLAN_MIGRACION_SUPABASE.md](PLAN_MIGRACION_SUPABASE.md).
+
 ## 2026-07-12 (Migración a Supabase — cutover a producción)
 
 Con el proyecto Supabase real creado por el cliente, el esquema

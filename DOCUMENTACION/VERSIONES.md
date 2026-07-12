@@ -131,12 +131,14 @@ del orden de bloques) no incluida en este pase.
   siempre — cero cambios en `LIST_SCHEMAS`/`BLOCK_DEFS`/Theme Builder.
 - Verificado contra el proyecto real (no simulado): lectura pública,
   escritura sin sesión admin rechazada por RLS, portal completo
-  cargando en desktop y mobile sin errores. Detalle completo en
+  cargando en desktop y mobile sin errores.
+- **Cerrado (2026-07-12):** el admin confirmó en producción, con sus
+  credenciales reales, el ciclo completo — login, editar, guardar,
+  recargar en modo cliente, y ver el mismo cambio desde otro
+  dispositivo. Los 5 pasos funcionaron. Detalle completo en
   [PLAN_MIGRACION_SUPABASE.md](PLAN_MIGRACION_SUPABASE.md).
-- **Pendiente:** login exitoso + guardado end-to-end con las
-  credenciales reales del admin (no verificable sin su contraseña,
-  por diseño) — y la subida de imágenes a Storage (siguen en base64
-  por ahora, funcionando, pero no migradas todavía).
+- Queda como mejora futura (no bloquea el cierre): subida de imágenes
+  a Storage (siguen en base64, funcionando, no migradas todavía).
 - Reabrió una decisión que estaba marcada como resuelta: "un cliente
   por deployment" (ver [DECISIONES.md](DECISIONES.md)) — el pedido de
   diseñar pensando en cientos de clientes la puso otra vez en
