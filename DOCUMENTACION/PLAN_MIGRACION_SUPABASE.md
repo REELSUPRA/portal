@@ -182,11 +182,10 @@ rechaza cualquier escritura sin una sesión autenticada con rol
 admin**, sin importar qué haga el navegador. Esto es un cierre de
 brecha real, no solo prolijidad.
 
-- Método propuesto: **email + contraseña** (no magic link) — no
-  depende de la entrega de emails de Supabase (rate-limitada en el
-  plan gratuito) y es más simple de razonar para un solo usuario admin
-  por ahora. Si preferís magic link, es un cambio menor en la pantalla
-  de login, no en el esquema.
+- Método **confirmado (2026-07-12): email + contraseña** (no magic
+  link) — no depende de la entrega de emails de Supabase (rate-limitada
+  en el plan gratuito) y es más simple de razonar para un solo usuario
+  admin por ahora.
 - Tabla `profiles` (`role`, `client_id`) ya existe en el esquema —
   lista para cuando se active login de Cliente.
 
@@ -277,6 +276,15 @@ En este orden exacto — cada paso depende del anterior:
   Supabase, misma interfaz que `js/store.js`, con fallback a `data.js`
   si Supabase no responde. **No conectado todavía** (ver sección 0).
 
+## Decisiones ya confirmadas (2026-07-12)
+
+- Login de admin: **email + contraseña** (sección 5).
+- Seed inicial: **arranca con los mismos placeholders que hoy tiene
+  `data.js`** (no se incorpora el `localStorage` de la PC) — el
+  logo/portada reales se vuelven a subir una vez el panel ya esté
+  guardando en Supabase, y ahí sí quedan persistidos de verdad, para
+  cualquier dispositivo.
+
 ## Bloqueado en
 
 Esto es lo único que falta para terminar y verificar esta fase:
@@ -288,14 +296,5 @@ Esto es lo único que falta para terminar y verificar esta fase:
    la da RLS, no el secreto de esa clave. **Nunca** la
    `service_role key` — esa sí es secreta, no se pega en el código ni
    se comparte por chat.
-2. Confirmar el método de login de admin (propongo email+contraseña,
-   sección 5) — si no decís nada, sigo con esa opción.
-3. Si querés que el logo/portada reales que ya subiste en tu PC
-   (siguen solo en el `localStorage` de esa PC, confirmado en la
-   conversación anterior) entren al seed inicial de Supabase, mandame
-   el archivo de "Exportar JSON" de ese navegador antes de que corra
-   el seed — si no, arranca con los mismos placeholders que hoy tiene
-   `data.js` y los volvés a subir una vez ya en Supabase (ahora sí
-   persistiendo de verdad, en cualquier dispositivo).
 
 Con eso, el checklist de la sección 7 es una sola sesión de trabajo.
