@@ -71,7 +71,14 @@ window.RSStore = (() => {
       theme: row.theme || {},
       welcomeMessage: row.welcome_message,
       heroSlides: row.hero_slides || [],
+      // "Acceso al Portal" — de solo lectura acá; los escribe
+      // exclusivamente la Edge Function manage-client-access, nunca
+      // save() (clientToRow() no los incluye a propósito).
+      portalEmail: row.portal_email || null,
+      portalUserId: row.portal_user_id || null,
+      portalAccessStatus: row.portal_access_status || "sin_invitar",
       _id: row.id, // uso interno (save necesita el uuid) — no lo lee render.js
+      _slug: row.slug, // uso interno (selector de clientes) — no lo lee render.js
     };
   }
 
@@ -282,5 +289,50 @@ window.RSStore = (() => {
     }
   }
 
-  return { load, save, clear, hydrate, signIn, signOut, getSession };
+  // ---- "Acceso al Portal" ----
+
+  // Lista mínima para el selector de clientes del panel — no trae
+  // listas/jsonb pesados, solo lo necesario para elegir cuál administrar.
+  function listClients() {
+    return client()
+      .from("clients")
+      .select("id, slug, name")
+      .order("name", { ascending: true })
+      .then(({ data, error }) => {
+        if (error) throw error;
+        return data || [];
+      });
+  }
+
+  // Invitar/reenviar/restaurar/revocar/cambiar email — todas pasan por
+  // la Edge Function (única pieza con la service_role key). No hay
+  // "no autorizado" silencioso: si la función devuelve ok:false, se
+  // propaga el motivo tal cual para mostrarlo en el toast.
+  function manageAccess(action, clientId, email) {
+    return client()
+      .functions.invoke("manage-client-access", { body: { action, clientId, email } })
+      .then(({ data, error }) => {
+        if (error) throw error;
+        if (!data || !data.ok) throw new Error((data && data.error) || "No se pudo completar la acción.");
+        return data; // { ok, portalEmail, portalAccessStatus }
+      });
+  }
+
+  // "Restablecer acceso" — a diferencia de las de arriba, NO necesita
+  // la Edge Function ni la service_role key: es un método público de
+  // Supabase Auth, funciona con la publishable key directo.
+  function resetPasswordForClient(email) {
+    return client()
+      .auth.resetPasswordForEmail(email)
+      .then(({ error }) => {
+        if (error) throw error;
+        return true;
+      });
+  }
+
+  return {
+    load, save, clear, hydrate,
+    signIn, signOut, getSession,
+    listClients, manageAccess, resetPasswordForClient,
+  };
 })();

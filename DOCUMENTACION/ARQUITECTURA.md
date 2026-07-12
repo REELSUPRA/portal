@@ -265,6 +265,37 @@ editar → guardar → recargar en modo cliente → abrir desde otro
 dispositivo. Los 5 pasos funcionaron. **Migración cerrada
 (2026-07-12).**
 
+### "Acceso al Portal" (gestión de clientes sin el dashboard de Supabase)
+
+Desde 2026-07-12 (en curso, ver [PLAN_ACCESO_PORTAL.md](PLAN_ACCESO_PORTAL.md)):
+el panel admin tiene un selector de clientes y, por cada cliente, una
+sección "Acceso al portal" (invitar, reenviar invitación, restablecer
+contraseña, revocar/restaurar acceso, cambiar email) — sin entrar
+nunca al dashboard de Supabase.
+
+- Las acciones privilegiadas (crear cuenta, cambiar email de otro
+  usuario) necesitan la Auth Admin API, que requiere la
+  `service_role key` — esa clave **nunca** va al navegador. Vive solo
+  como variable de entorno en la Edge Function
+  `supabase/functions/manage-client-access/index.ts`, la única pieza
+  del proyecto que la usa. La función verifica primero (con un cliente
+  separado, scoped al JWT de quien llama) que quien invoca es
+  realmente admin, y solo entonces usa el cliente con la
+  `service_role key`.
+- Restablecer contraseña es la única acción que **no** pasa por la
+  Edge Function: `resetPasswordForEmail` es público en Supabase Auth,
+  se llama directo con la publishable key.
+- `clients.portal_email` / `portal_user_id` / `portal_access_status`
+  (columnas aditivas, `supabase/05_client_access_columns.sql`) espejan
+  el estado de Auth en la tabla, para que el panel lo muestre sin un
+  round-trip extra a la Auth Admin API. Las escribe únicamente la Edge
+  Function; `RSStore.save()`/`clientToRow()` nunca las tocan.
+- El gate real de lectura por cliente (retirar la lectura pública de
+  `clients`/`projects`, `supabase/06_client_access_gate.sql`) está
+  preparado pero **sin activar** — requiere invitar antes al cliente
+  real y construir un estado "sin acceso" en el frontend. Ver el plan
+  para el detalle y las condiciones de activación.
+
 ## Modo administrador (`js/admin.js`)
 
 - Se activa con `?admin=true`, ruta `/admin` (via `_redirects`), o

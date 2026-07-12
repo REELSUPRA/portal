@@ -145,6 +145,27 @@ del orden de bloques) no incluida en este pase.
   discusión; el esquema ya soporta multi-cliente, la decisión de
   producto sigue abierta.
 
+## v0.10 — "Acceso al Portal": gestión de clientes sin el dashboard de Supabase (2026-07-12, en curso)
+
+- Nueva sección "Acceso al portal" en el panel admin (por cliente):
+  ver email, invitar, reenviar invitación, restablecer contraseña,
+  revocar y restaurar acceso, cambiar email — sin pisar nunca el
+  dashboard de Supabase.
+- Selector de clientes agregado en el panel (pensado desde ya para
+  "cientos de clientes", no solo el actual).
+- Arquitectura: Edge Function `manage-client-access` como única pieza
+  con la `service_role key` (verifica rol admin antes de usarla);
+  columnas aditivas `portal_email`/`portal_user_id`/`portal_access_status`
+  en `clients`; `RSStore.listClients/manageAccess/resetPasswordForClient`.
+  Detalle y por qué esta arquitectura en
+  [PLAN_ACCESO_PORTAL.md](PLAN_ACCESO_PORTAL.md).
+- **No cerrado todavía:** faltan 2 pasos manuales del admin (correr el
+  SQL aditivo, desplegar la Edge Function) y la prueba end-to-end con
+  un email propio. El gate real de lectura por cliente
+  (`06_client_access_gate.sql`) queda preparado pero **sin activar** —
+  necesita invitar antes al cliente real (Juan Guzmán) y construir un
+  estado "sin acceso" en el frontend.
+
 ## Deployment — 2026-07-11
 
 - Repo conectado a GitHub: `https://github.com/REELSUPRA/portal`

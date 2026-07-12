@@ -6,6 +6,39 @@ por cada cambio (eso va en [CHANGELOG.md](CHANGELOG.md)).
 
 ---
 
+## 2026-07-12 — "Acceso al Portal": Edge Function + gate real, selector de clientes ahora
+
+**Contexto:** se pidió administrar el acceso de los clientes al portal
+(invitar, revocar, reenviar, restablecer contraseña, cambiar email)
+100% desde el panel admin, sin tocar el dashboard de Supabase.
+
+**Decisión (arquitectura, antes de programar):** las acciones
+privilegiadas necesitan la Auth Admin API (`service_role key`), que no
+puede vivir en el navegador — se resuelve con una Edge Function
+(`manage-client-access`) como único lugar del proyecto que la usa,
+verificando primero que quien llama es admin. Restablecer contraseña
+es la única acción que no la necesita (método público de Auth).
+
+**Decisión (producto, confirmada con el admin vía pregunta explícita
+antes de implementar):**
+
+- El acceso es un **gate real** (requiere login), no solo gestión de
+  cuentas sin efecto sobre la lectura — se prefirió sobre la opción
+  más simple de "invitar pero seguir con lectura pública" porque el
+  objetivo declarado es un portal por-cliente, no un directorio
+  público.
+- El **selector de clientes** en el panel se incluye ahora, no se
+  posterga — consistente con diseñar ya pensando en "cientos de
+  clientes" en vez de parchear cuando aparezca el segundo cliente real.
+
+**Consecuencia:** activar el gate real (`06_client_access_gate.sql`)
+queda deliberadamente como un paso posterior, separado — necesita
+invitar antes al cliente real (Juan Guzmán) con este mecanismo nuevo y
+un estado "sin acceso" en el frontend que hoy no existe. Ver
+[PLAN_ACCESO_PORTAL.md](PLAN_ACCESO_PORTAL.md).
+
+---
+
 ## 2026-07-11 — Consolidación de estructura del proyecto
 
 **Contexto:** existían dos copias del proyecto (`PORTALCLIENTE` plano en

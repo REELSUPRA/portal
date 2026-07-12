@@ -598,6 +598,179 @@
   }
 
   /* ---------------------------------------------------------- */
+  /* Selector de clientes + Acceso al Portal                      */
+  /* ---------------------------------------------------------- */
+
+  // Selector para cambiar de cliente sin salir del panel — navega con
+  // ?client=<slug> (la URL sigue siendo la fuente de verdad de "qué
+  // cliente estoy viendo", igual que hoy). Con un solo cliente real
+  // hoy no cambia nada visible salvo la lista con una opción.
+  function buildClientSelector(body) {
+    const wrap = document.createElement("div");
+    wrap.className = "admin-field";
+    wrap.style.marginBottom = "var(--space-4)";
+    const label = document.createElement("label");
+    label.textContent = "Cliente (cambiar)";
+    wrap.appendChild(label);
+    const select = document.createElement("select");
+    select.disabled = true;
+    select.innerHTML = `<option>Cargando…</option>`;
+    wrap.appendChild(select);
+    body.appendChild(wrap);
+
+    RSStore.listClients()
+      .then((clients) => {
+        const current = window.CLIENT_DATA.client._slug;
+        select.innerHTML = clients
+          .map((c) => `<option value="${c.slug}" ${c.slug === current ? "selected" : ""}>${c.name}</option>`)
+          .join("");
+        select.disabled = false;
+        select.addEventListener("change", (e) => {
+          const url = new URL(window.location.href);
+          url.searchParams.set("client", e.target.value);
+          url.searchParams.set("admin", "1");
+          window.location.href = url.toString();
+        });
+      })
+      .catch((e) => {
+        select.innerHTML = `<option>No se pudo cargar la lista</option>`;
+        console.warn("RSAdmin: no se pudo listar clientes.", e);
+      });
+  }
+
+  // "Acceso al Portal" — todas las acciones pasan por RSStore
+  // (manageAccess/resetPasswordForClient), que a su vez llaman a la
+  // Edge Function manage-client-access o a Supabase Auth directo. Este
+  // bloque solo arma la UI y refleja el estado que devuelve cada
+  // acción — no toca CLIENT_DATA ni pasa por markDirty/saveChanges,
+  // porque no es un cambio "sin guardar": ya queda guardado en el
+  // momento en que la acción responde ok:true.
+  function buildPortalAccessSection(data) {
+    const wrap = document.createElement("div");
+    wrap.style.marginBottom = "var(--space-4)";
+
+    const statusLabels = {
+      sin_invitar: "Sin invitar",
+      invitado: "Invitado / con acceso",
+      revocado: "Acceso revocado",
+    };
+
+    const statusEl = document.createElement("div");
+    statusEl.className = "admin-portal-access__status";
+    statusEl.style.cssText = "font-size:13px; color:var(--text-muted); margin-bottom:var(--space-2);";
+    wrap.appendChild(statusEl);
+
+    // Campo propio (no el field() compartido): ese helper llama
+    // markDirty() en cada tecla, y este email no viaja por
+    // saveChanges()/RSStore.save() — se confirma recién al presionar
+    // una de las acciones de abajo, vía la Edge Function. Usar
+    // markDirty() acá abriría la barra "cambios sin guardar" por un
+    // dato que en realidad no persiste ese camino.
+    let pendingEmail = data.client.portalEmail || "";
+    const emailWrap = document.createElement("div");
+    emailWrap.className = "admin-field";
+    const emailLabel = document.createElement("label");
+    emailLabel.textContent = "Email del cliente";
+    emailWrap.appendChild(emailLabel);
+    const emailInput = document.createElement("input");
+    emailInput.type = "email";
+    emailInput.value = pendingEmail;
+    emailInput.addEventListener("input", (e) => { pendingEmail = e.target.value; });
+    emailWrap.appendChild(emailInput);
+    wrap.appendChild(emailWrap);
+
+    const actionsRow = document.createElement("div");
+    actionsRow.style.cssText = "display:flex; flex-wrap:wrap; gap:var(--space-2);";
+    wrap.appendChild(actionsRow);
+
+    function renderStatus() {
+      statusEl.textContent = `Estado: ${statusLabels[data.client.portalAccessStatus] || data.client.portalAccessStatus}`;
+    }
+
+    function actionBtn(label, onClick) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "btn btn--ghost";
+      btn.textContent = label;
+      btn.addEventListener("click", () => {
+        btn.disabled = true;
+        onClick(btn).finally(() => { btn.disabled = false; });
+      });
+      return btn;
+    }
+
+    function runAccessAction(action, email) {
+      return RSStore.manageAccess(action, data.client._id, email)
+        .then((res) => {
+          data.client.portalEmail = res.portalEmail;
+          data.client.portalAccessStatus = res.portalAccessStatus;
+          renderStatus();
+          renderActions();
+          showToast("Listo — Acceso al Portal actualizado");
+        })
+        .catch((e) => {
+          showToast(e.message || "No se pudo completar la acción", "error");
+        });
+    }
+
+    function renderActions() {
+      actionsRow.innerHTML = "";
+      const status = data.client.portalAccessStatus;
+
+      if (status === "sin_invitar") {
+        actionsRow.appendChild(
+          actionBtn(`${RS.icon("send")} Dar acceso`, () => {
+            if (!pendingEmail) { showToast("Ingresá un email primero", "error"); return Promise.resolve(); }
+            return runAccessAction("invite", pendingEmail);
+          })
+        );
+      }
+
+      if (status === "invitado") {
+        actionsRow.appendChild(
+          actionBtn(`${RS.icon("send")} Reenviar invitación`, () => runAccessAction("resend"))
+        );
+        actionsRow.appendChild(
+          actionBtn(`${RS.icon("key")} Restablecer contraseña`, () => {
+            if (!data.client.portalEmail) return Promise.resolve();
+            return RSStore.resetPasswordForClient(data.client.portalEmail)
+              .then(() => showToast("Email de restablecimiento enviado"))
+              .catch((e) => showToast(e.message || "No se pudo enviar el email", "error"));
+          })
+        );
+        actionsRow.appendChild(
+          actionBtn(`${RS.icon("x")} Revocar acceso`, () => {
+            if (!window.confirm("¿Revocar el acceso de este cliente al portal?")) return Promise.resolve();
+            return runAccessAction("revoke");
+          })
+        );
+      }
+
+      if (status === "revocado") {
+        actionsRow.appendChild(
+          actionBtn(`${RS.icon("send")} Restaurar acceso`, () => runAccessAction("grant"))
+        );
+      }
+
+      if (status !== "sin_invitar") {
+        actionsRow.appendChild(
+          actionBtn(`${RS.icon("edit")} Cambiar email`, () => {
+            if (!pendingEmail || pendingEmail === data.client.portalEmail) {
+              showToast("Escribí el nuevo email en el campo de arriba", "error");
+              return Promise.resolve();
+            }
+            return runAccessAction("change_email", pendingEmail);
+          })
+        );
+      }
+    }
+
+    renderStatus();
+    renderActions();
+    return wrap;
+  }
+
+  /* ---------------------------------------------------------- */
   /* Panel lateral (textos básicos)                               */
   /* ---------------------------------------------------------- */
 
@@ -633,6 +806,7 @@
     });
 
     const body = panelEl.querySelector("#adminBody");
+    buildClientSelector(body);
     body.appendChild(groupTitle("Cliente"));
     body.appendChild(field("Nombre del cliente", data.client.name, (v) => (data.client.name = v)));
     body.appendChild(field("Mensaje de bienvenida", data.client.welcomeMessage, (v) => (data.client.welcomeMessage = v), true));
@@ -654,6 +828,9 @@
     brandRow.appendChild(logoBtn);
     brandRow.appendChild(faviconBtn);
     body.appendChild(brandRow);
+
+    body.appendChild(groupTitle("Acceso al portal"));
+    body.appendChild(buildPortalAccessSection(data));
 
     buildThemeBuilder(body, data);
 

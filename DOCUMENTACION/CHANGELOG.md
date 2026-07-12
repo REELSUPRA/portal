@@ -3,6 +3,34 @@
 Registro cronológico de cambios, más granular que
 [VERSIONES.md](VERSIONES.md). Orden: más reciente arriba.
 
+## 2026-07-12 ("Acceso al Portal" — gestión de clientes sin el dashboard de Supabase)
+
+Nueva sección "Acceso al portal" en el panel admin, más un selector de
+clientes (pensado para "cientos de clientes", no solo el actual).
+Objetivo: invitar/revocar/reenviar/restablecer contraseña/cambiar
+email de un cliente sin entrar nunca al dashboard de Supabase.
+
+- `supabase/05_client_access_columns.sql`: columnas `portal_email` /
+  `portal_user_id` / `portal_access_status` en `clients` (aditivo, no
+  toca RLS ni lectura pública).
+- `supabase/functions/manage-client-access/index.ts`: Edge Function
+  nueva — única pieza del proyecto con la `service_role key`. Verifica
+  que quien llama es admin antes de usarla. Acciones: `invite`,
+  `resend`, `grant`, `revoke`, `change_email`.
+- `js/store.supabase.js`: `listClients()`, `manageAccess()`,
+  `resetPasswordForClient()`.
+- `js/admin.js`: selector de clientes + sección "Acceso al portal" en
+  el panel.
+- `supabase/06_client_access_gate.sql`: preparado, **sin correr
+  todavía** — retira la lectura pública y la reemplaza por un gate real
+  por cliente. Pendiente invitar primero a Juan Guzmán con este
+  mecanismo y construir el estado "sin acceso" en el frontend. Ver
+  [PLAN_ACCESO_PORTAL.md](PLAN_ACCESO_PORTAL.md).
+
+Pendiente (del admin, no del código): correr `05_client_access_columns.sql`,
+desplegar la Edge Function, y probar el flujo completo con un email
+propio — instrucciones exactas en el plan.
+
 ## 2026-07-12 (Migración a Supabase — cierre, verificación end-to-end)
 
 El propio admin corrió la prueba de punta a punta en producción
