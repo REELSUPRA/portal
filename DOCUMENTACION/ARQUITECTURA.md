@@ -231,6 +231,21 @@ de la V3, ver [PLAN_V3_PORTAL_VIVO.md](PLAN_V3_PORTAL_VIVO.md)):
   ejemplo, por la razón anterior) se comportaba como exitoso en la UI:
   la barra se cerraba y el cambio se perdía sin aviso real.
 
+## Migración de persistencia a Supabase (en curso, no conectada todavía)
+
+Todo lo descripto en esta sección ("Modo administrador") de acá abajo
+sigue siendo exactamente así **en producción, hoy**. Hay una migración
+en curso de `localStorage` a Supabase (disparada porque los cambios
+guardados no se veían desde otro dispositivo — vivían solo en el
+navegador donde se guardaron) — el plan completo, el esquema SQL, las
+políticas de RLS y el código nuevo (`js/store.supabase.js`, en
+paralelo a `js/store.js`, sin conectar) están en
+[PLAN_MIGRACION_SUPABASE.md](PLAN_MIGRACION_SUPABASE.md) y en la
+carpeta `supabase/`. No se activa hasta tener un proyecto Supabase
+real — activar `js/store.supabase.js` sin credenciales reales
+rompería el portal en producción (`hydrate()` corre antes de
+cualquier render).
+
 ## Modo administrador (`js/admin.js`)
 
 - Se activa con `?admin=true`, ruta `/admin` (via `_redirects`), o

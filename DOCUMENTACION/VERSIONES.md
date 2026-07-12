@@ -116,6 +116,32 @@ del orden de bloques) no incluida en este pase.
 - Pendiente de la V3: Centro de Actividad (Prioridad 2) y Hero
   Inteligente / carrusel reutilizable (Prioridad 3) — ver el plan.
 
+## En curso — Migración de arquitectura a Supabase (iniciada 2026-07-12)
+
+**No es una versión cerrada** — se documenta acá para que quede claro
+que hay trabajo de infraestructura hecho aunque todavía no haya nada
+nuevo visible en producción. Ver
+[PLAN_MIGRACION_SUPABASE.md](PLAN_MIGRACION_SUPABASE.md) para el plan
+completo.
+
+- Objetivo: reemplazar `localStorage` (por navegador, no sincroniza
+  entre dispositivos) por Supabase como fuente de verdad real —
+  disparado porque el cliente confirmó que sus cambios (logos,
+  portada) no se veían desde otros dispositivos, ya que nunca habían
+  salido del `localStorage` de una sola PC.
+- Preparado y en el repo, sin conectar todavía (no rompe nada de lo
+  que ya funciona en producción): esquema SQL completo (`supabase/`),
+  políticas de Row Level Security, 4 buckets de Storage, y
+  `js/store.supabase.js` (misma interfaz que `js/store.js`, contra
+  Supabase).
+- Bloqueado en: un proyecto Supabase real (credenciales) — ver la
+  sección "Bloqueado en" del plan para el detalle exacto de los 3
+  puntos pendientes.
+- Reabre una decisión que estaba marcada como resuelta: "un cliente
+  por deployment" (ver [DECISIONES.md](DECISIONES.md)) — el pedido de
+  diseñar pensando en cientos de clientes la pone otra vez en
+  discusión.
+
 ## Deployment — 2026-07-11
 
 - Repo conectado a GitHub: `https://github.com/REELSUPRA/portal`

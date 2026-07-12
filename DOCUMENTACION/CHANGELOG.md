@@ -3,6 +3,39 @@
 Registro cronológico de cambios, más granular que
 [VERSIONES.md](VERSIONES.md). Orden: más reciente arriba.
 
+## 2026-07-12 (Migración a Supabase — análisis, diseño e infraestructura)
+
+Disparado por: el cliente reportó que sus cambios (logos, portada) no
+se veían desde otro dispositivo — investigado y confirmado que vivían
+solo en `localStorage` de una PC, nunca en el repo. Pedido explícito
+de migrar a Supabase, diseñando para "cientos de clientes". Ver
+[PLAN_MIGRACION_SUPABASE.md](PLAN_MIGRACION_SUPABASE.md) para el
+análisis y diseño completos.
+
+- **Sin cambios visibles en producción todavía** — este pase es
+  infraestructura y diseño, no cutover. `js/store.js` (localStorage)
+  sigue siendo el que corre en el sitio en vivo.
+- **Agregado, en paralelo, sin conectar:** esquema SQL completo
+  (`supabase/01_schema.sql`), políticas de Row Level Security
+  (`02_policies.sql`), 4 buckets de Storage (`03_storage.sql`), seed
+  con el contenido real actual de `data.js` (`04_seed_from_data_js.sql`),
+  y `js/store.supabase.js` (misma interfaz `{load,save,clear,hydrate}`
+  que `js/store.js`, contra Supabase, con fallback a `data.js` si
+  Supabase no responde).
+- **Decisión de arquitectura:** cáscara relacional (`clients`/
+  `projects`) + contenido de cada lista como `jsonb` — da RLS real por
+  cliente sin tocar el motor declarativo existente (`LIST_SCHEMAS`/
+  `BLOCK_DEFS`/Theme Builder). Ver [DECISIONES.md](DECISIONES.md).
+- **Se reabre** la decisión "un cliente por deployment" (estaba
+  marcada como resuelta) — el pedido de "cientos de clientes" la
+  contradice. Documentado como señalado, no resuelto.
+- **Cierre de una brecha de seguridad real** (no solo prolijidad):
+  hoy el gate de admin es una contraseña en un JS público sin
+  verificación del servidor — cualquiera podía saltearlo desde la
+  consola del navegador. RLS lo va a hacer cumplir server-side.
+- Bloqueado en: credenciales de un proyecto Supabase real (no
+  fabricadas ni simuladas) — ver "Bloqueado en" en el plan.
+
 ## 2026-07-12 (V3 Portal Vivo — Prioridad 1: Responsive completo)
 
 Pedido explícito: antes de seguir con funcionalidades nuevas (Centro de

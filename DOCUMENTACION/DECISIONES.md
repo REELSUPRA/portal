@@ -142,3 +142,64 @@ señalado para revisar si el uso crece.
 el día uno, aunque `localStorage` sea síncrono — el objetivo es que
 cambiar el destino sea reescribir `js/store.js` únicamente, sin tocar
 `admin.js` ni el resto de la interfaz.
+
+**Actualización (2026-07-12):** ese cambio de backend llegó — ver la
+entrada de abajo. Confirmado en la práctica: el reemplazo fue,
+efectivamente, un `js/store.js` nuevo (`js/store.supabase.js`) con la
+misma interfaz, sin tocar `admin.js` más que en los 2 puntos que sí
+dependían del dato (gate de admin, subida de imágenes) — documentados
+como excepción explícita en su momento.
+
+---
+
+## 2026-07-12 — Migración de persistencia a Supabase; se reabre "un cliente por deployment"
+
+**Contexto:** el cliente reportó que sus cambios (logos, portada,
+configuración) no se veían desde otro dispositivo — investigado y
+confirmado: vivían solo en el `localStorage` de una PC, nunca en
+`data.js`/el repo. Pedido explícito de migrar a una arquitectura real
+(Supabase), "diseñando pensando en cientos de clientes".
+
+**Decisión 1 — persistencia:** Supabase (Postgres + Auth + Storage)
+reemplaza a `localStorage` como fuente de verdad. `localStorage` deja
+de tener rol funcional (puede quedar como caché, nunca como origen).
+`js/data.js` conserva un único rol: fallback si Supabase no responde
+— no bootstrap editable ni fuente de verdad.
+
+**Decisión 2 — forma de los datos:** cáscara relacional
+(`clients`/`projects`, tablas reales) + contenido de cada lista como
+`jsonb` con la misma forma que ya usa `CLIENT_DATA` hoy, en vez de una
+tabla por lista. Razón: da el límite de fila real que necesita RLS
+para "cientos de clientes" sin tocar el motor declarativo ya
+construido (`LIST_SCHEMAS`/`BLOCK_DEFS`/Theme Builder) — ese motor
+sigue leyendo/escribiendo objetos JS idénticos a los de siempre. Detalle
+completo en [PLAN_MIGRACION_SUPABASE.md](PLAN_MIGRACION_SUPABASE.md).
+
+**Decisión 3 — se reabre una decisión marcada como resuelta:** la
+entrada de arriba en este mismo documento decía *"se decidió mantener
+[un deployment por cliente] para la V1 y la V2"* — no pendiente,
+resuelta. El pedido de "cientos de clientes" la contradice. No la
+piso en silencio: el esquema de datos nuevo (Decisión 2) ya soporta
+multi-cliente real en un solo deployment, pero la decisión de
+**producto** (¿se vende un deployment por cliente, o un solo portal
+para todos los clientes de la agencia?) sigue abierta — señalada, no
+resuelta todavía.
+
+**Decisión 4 — seguridad, cierre de una brecha real:** hoy el modo
+admin se protege con una contraseña en texto plano dentro de un
+archivo JS público, sin ninguna verificación del lado del servidor —
+cualquiera con las herramientas de desarrollador podía saltear el
+gate llamando directamente a las funciones de `admin.js`. Row Level
+Security en Supabase hace cumplir "solo admin escribe" en el
+servidor, sin depender de qué haga el navegador. La lectura pública
+del portal (sin login) se mantiene igual que siempre — no es una
+regresión, es el mismo modelo de seguridad de toda la vida del
+proyecto (la URL es el límite, no una contraseña).
+
+**Pendiente/diferido, ya con esquema preparado:** login real de
+Cliente (`profiles.role = 'client'`, policies ya escritas pero
+comentadas en `supabase/02_policies.sql`) — no bloquea esta fase por
+pedido explícito ("no hace falta terminar todo el sistema de login").
+
+**Bloqueado en:** credenciales de un proyecto Supabase real — ver
+"Bloqueado en" en [PLAN_MIGRACION_SUPABASE.md](PLAN_MIGRACION_SUPABASE.md).
