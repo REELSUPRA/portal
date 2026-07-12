@@ -95,6 +95,27 @@ del orden de bloques) no incluida en este pase.
 - Fase 4 (sistema de diseño: radios, sombras, estilos de botón/tarjeta,
   claro/oscuro) queda pendiente — ver [PLAN_V2_CMS.md](PLAN_V2_CMS.md).
 
+## v0.8 — V3 Portal Vivo, Prioridad 1: Responsive completo (2026-07-12)
+
+- Arranca la V3: convertir el portal en una experiencia "viva", no solo
+  informativa — ver [PLAN_V3_PORTAL_VIVO.md](PLAN_V3_PORTAL_VIVO.md).
+  Prioridad absoluta antes de seguir: el sitio debía quedar 100%
+  responsive, sin ocultar contenido por CSS.
+- Los 7 `@media` sueltos e inconsistentes se consolidaron en 2 bloques
+  únicos (Tablet/Mobile), auditados componente por componente.
+- Dos bugs reales corregidos (no solo estética): imágenes subidas sin
+  comprimir podían superar la cuota de `localStorage` y no persistir
+  en mobile; un guardado fallido se marcaba como exitoso en la UI. Ver
+  [BUGS.md](BUGS.md).
+- Objetivos táctiles de ~40px en todo el modo admin, inputs a 16px
+  (evita el zoom automático de Safari en iOS), modales a pantalla
+  completa en mobile, portada del cliente con prioridad visual
+  (sangrado a los bordes) en vez de "comprimida".
+- Verificado en Desktop, iPhone SE, iPhone 13, Pixel 7 e iPad — sin
+  errores de consola, sin overflow horizontal, sin requests fallidos.
+- Pendiente de la V3: Centro de Actividad (Prioridad 2) y Hero
+  Inteligente / carrusel reutilizable (Prioridad 3) — ver el plan.
+
 ## Deployment — 2026-07-11
 
 - Repo conectado a GitHub: `https://github.com/REELSUPRA/portal`

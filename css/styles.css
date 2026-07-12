@@ -194,6 +194,12 @@ button {
   margin-left: var(--space-3);
 }
 
+.topbar__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
 .back-link {
   display: inline-flex;
   align-items: center;
@@ -334,12 +340,6 @@ button {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: var(--space-6);
-}
-
-@media (max-width: 760px) {
-  .project-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 .project-card {
@@ -484,7 +484,7 @@ button {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  padding: 6px 12px;
+  padding: 8px 14px;
   border-radius: 999px;
   font-size: 12.5px;
   font-weight: 600;
@@ -695,20 +695,6 @@ button {
 .meta-item__value {
   font-size: 14.5px;
   font-weight: 600;
-}
-
-/* Grid de contenido */
-.detail-grid {
-  display: grid;
-  grid-template-columns: 1.5fr 1fr;
-  gap: var(--space-12);
-  padding: var(--space-12) 0;
-}
-
-@media (max-width: 860px) {
-  .detail-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 .block {
@@ -1058,6 +1044,10 @@ button {
 
 .admin-panel__close {
   color: var(--rs-gray-500);
+  /* Ícono visualmente chico, pero el área táctil real es ~40px
+     (relleno invisible) — cómodo para cerrar con el dedo. */
+  padding: 11px;
+  margin: -11px;
 }
 
 .admin-panel__close:hover {
@@ -1101,8 +1091,10 @@ button {
 .admin-field textarea {
   width: 100%;
   font-family: var(--font-sans);
-  font-size: 14px;
-  padding: var(--space-2) var(--space-3);
+  /* 16px, no 14px: por debajo de eso Safari en iOS hace zoom automático
+     de toda la página al enfocar el campo — se sentía "roto" en mobile. */
+  font-size: 16px;
+  padding: 10px var(--space-3);
   border: 1px solid var(--rs-gray-100);
   border-radius: var(--radius-sm);
   background: var(--rs-gray-50);
@@ -1231,10 +1223,6 @@ button {
   color: var(--rs-black);
 }
 
-@media (max-width: 640px) {
-  .save-bar { flex-direction: column; gap: var(--space-3); }
-}
-
 /* ============================================================
    BLOQUES REORDENABLES (project.html)
    ============================================================ */
@@ -1298,6 +1286,8 @@ button {
   color: var(--rs-gray-300);
   cursor: grab;
   display: flex;
+  padding: 10px;
+  margin: -10px;
 }
 
 .drag-handle:active {
@@ -1307,6 +1297,8 @@ button {
 .block-visibility-toggle {
   color: var(--rs-gray-300);
   transition: color var(--duration) var(--ease);
+  padding: 10px;
+  margin: -10px;
 }
 
 .block-visibility-toggle:hover {
@@ -1323,10 +1315,6 @@ button {
   background: var(--rs-red-dim);
   padding: 6px 12px;
   border-radius: 999px;
-}
-
-@media (max-width: 700px) {
-  .admin-mode-badge span { display: none; }
 }
 
 .btn--sm {
@@ -1359,8 +1347,8 @@ button {
   position: absolute;
   bottom: -6px;
   right: -6px;
-  width: 22px;
-  height: 22px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   background: var(--rs-black);
   color: var(--rs-white);
@@ -1376,8 +1364,8 @@ button {
 }
 
 .logo-edit-btn .icon {
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
 }
 
 /* ============================================================
@@ -1393,10 +1381,6 @@ button {
   grid-template-columns: repeat(8, 1fr);
   gap: var(--space-2);
   margin-bottom: var(--space-3);
-}
-
-@media (max-width: 640px) {
-  .content-grid { grid-template-columns: repeat(4, 1fr); }
 }
 
 .content-piece {
@@ -1538,8 +1522,8 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 30px;
-  height: 30px;
+  min-width: 36px;
+  height: 36px;
   padding: 0 var(--space-2);
   border-radius: var(--radius-sm);
   color: var(--rs-gray-500);
@@ -1632,12 +1616,6 @@ button {
   white-space: nowrap;
 }
 
-@media (max-width: 640px) {
-  .cal-grid { grid-template-columns: repeat(7, 1fr); gap: 2px; }
-  .cal-cell { min-height: 44px; padding: 3px; }
-  .cal-event { font-size: 0; padding: 0; width: 6px; height: 6px; border-radius: 50%; }
-}
-
 /* ============================================================
    MODAL DE EDICIÓN (pieza de contenido / logo)
    ============================================================ */
@@ -1714,8 +1692,8 @@ button {
 .admin-field select {
   width: 100%;
   font-family: var(--font-sans);
-  font-size: 14px;
-  padding: var(--space-2) var(--space-3);
+  font-size: 16px; /* ídem admin-field input: evita el zoom automático de iOS */
+  padding: 10px var(--space-3);
   border: 1px solid var(--rs-gray-100);
   border-radius: var(--radius-sm);
   background: var(--rs-gray-50);
@@ -1755,7 +1733,7 @@ button {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
+  padding: 10px var(--space-3);
   border: 1px solid var(--rs-gray-100);
   border-radius: var(--radius-sm);
   background: var(--rs-gray-50);
@@ -1817,8 +1795,8 @@ button {
 }
 
 .list-editor-item__order button {
-  width: 18px;
-  height: 14px;
+  width: 32px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1847,7 +1825,8 @@ button {
 .list-editor-item__edit,
 .list-editor-item__delete {
   color: var(--rs-gray-300);
-  padding: 4px;
+  padding: 11px;
+  margin: -7px;
 }
 
 .list-editor-item__edit:hover {
@@ -1856,4 +1835,155 @@ button {
 
 .list-editor-item__delete:hover {
   color: var(--status-error);
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================
+   Dos quiebres únicos para todo el sitio, consolidados acá (antes
+   había 7 sueltos, con breakpoints distintos, cada uno resuelto cerca
+   del componente apenas se construyó). Nada se oculta con
+   display:none por ancho de pantalla — solo reflow, tamaño y
+   espaciado. Tablet hereda todo lo que no pisa el bloque de mobile
+   (ambos @media son "max-width", así que un celular cumple las dos
+   condiciones — lo que no se repite en MOBILE ya quedó fijado por
+   TABLET).
+   ============================================================ */
+
+/* ---------- TABLET (<=1024px) ---------- */
+@media (max-width: 1024px) {
+  .shell,
+  .topbar__inner,
+  .announcement__inner {
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
+  }
+
+  .hero {
+    padding: var(--space-12) 0 var(--space-8);
+  }
+
+  .project-hero {
+    padding: var(--space-8) 0 var(--space-6);
+  }
+
+  .section {
+    padding: var(--space-8) 0;
+  }
+
+  .project-card,
+  .block-card,
+  .side-card {
+    padding: var(--space-6);
+  }
+
+  .admin-panel__body,
+  .admin-panel__header,
+  .admin-panel__footer {
+    padding: var(--space-4);
+  }
+}
+
+/* ---------- MOBILE (<=640px) ---------- */
+@media (max-width: 640px) {
+  .project-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Con el aviso de modo admin activo, brand + acciones ya no entran
+     en una sola fila sin apretarse — se acomodan en 2 filas en vez de
+     que el texto se envuelva dentro del badge (con border-radius:999px
+     eso lo deformaba en un óvalo). */
+  .topbar__inner {
+    flex-wrap: wrap;
+    row-gap: var(--space-2);
+  }
+
+  .topbar__actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .admin-mode-badge {
+    border-radius: var(--radius-sm);
+    white-space: normal;
+  }
+
+  /* Portada: prioridad visual apenas se entra, no "comprimida" —
+     sangra hasta el borde de la pantalla en vez de quedar encajonada
+     dentro del padding del shell. */
+  .hero__cover,
+  .hero__cover--empty {
+    height: auto;
+    aspect-ratio: 4 / 3;
+    margin-left: calc(var(--space-4) * -1);
+    margin-right: calc(var(--space-4) * -1);
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  }
+
+  .hero__cover--empty {
+    aspect-ratio: 16 / 9;
+  }
+
+  /* Sector/Idioma/Público/Plan en 2 columnas prolijas en vez de
+     flex-wrap con gap grande generando huecos irregulares. */
+  .meta-row {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-4) var(--space-3);
+  }
+
+  .smart-header__stats {
+    gap: var(--space-6);
+  }
+
+  .save-bar {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .content-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .cal-grid {
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+  }
+
+  .cal-cell {
+    min-height: 44px;
+    padding: 3px;
+  }
+
+  .cal-event {
+    font-size: 0;
+    padding: 0;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+  }
+
+  /* Botón por lista a lo ancho completo — más legible que 2 columnas
+     apretadas con texto truncado. */
+  .content-list-buttons {
+    grid-template-columns: 1fr;
+  }
+
+  /* Todos los modales (editor de imagen, pieza de contenido, editor
+     genérico de listas — comparten .piece-modal) pasan a hoja
+     inferior a pantalla completa: se usan con el pulgar, sin achicar
+     el formulario dentro de una caja centrada chica. */
+  .piece-modal-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .piece-modal {
+    width: 100vw;
+    max-width: 100vw;
+    max-height: 92vh;
+    max-height: 92dvh; /* dvh es más preciso con la barra de UI del navegador mobile; vh es el fallback */
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
 }

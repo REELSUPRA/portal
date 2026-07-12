@@ -246,13 +246,13 @@ const RS = (() => {
            <span class="brand__client">${esc(data.client.name)}</span></div>`;
 
     const adminBadge = isAdmin()
-      ? `<span class="admin-mode-badge">${icon("move")} Modo administrador — arrastrá los bloques para reordenar</span>`
+      ? `<span class="admin-mode-badge">${icon("move")} ${showBack ? "Modo administrador — arrastrá los bloques para reordenar" : "Modo administrador activo"}</span>`
       : "";
 
     el.innerHTML = `
       <div class="topbar__inner">
         ${left}
-        <div style="display:flex; align-items:center; gap: var(--space-4);">
+        <div class="topbar__actions">
           ${adminBadge}
           <button class="admin-toggle" id="adminToggle" aria-label="Abrir modo administrador">
             ${icon("settings")} Admin

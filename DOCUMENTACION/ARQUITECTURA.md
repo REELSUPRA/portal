@@ -183,6 +183,54 @@ tenga título/ícono — no está en `defaultBlockOrder()`, así que
 - Progreso general (`contentProgress`, ya existía) se movió del hero
   a este mismo bloque (`.smart-header`) para no duplicar la barra.
 
+## Responsive (`css/styles.css`)
+
+Dos quiebres únicos para todo el sitio, en dos bloques consolidados al
+final de la hoja de estilos — no hay `@media` sueltos cerca de cada
+componente (había 7, con breakpoints distintos, cada uno resuelto
+apenas se construyó ese componente; se consolidaron en la Prioridad 1
+de la V3, ver [PLAN_V3_PORTAL_VIVO.md](PLAN_V3_PORTAL_VIVO.md)):
+
+```
+@media (max-width: 1024px) { /* Tablet */ }
+@media (max-width: 640px)  { /* Mobile — un celular cumple ambas condiciones,
+                                 así que hereda todo lo de Tablet que no pise */ }
+```
+
+- **Nada se oculta con `display:none` por ancho de pantalla.** Todo lo
+  que cambia entre tamaños es layout (columnas → una sola, grillas que
+  se reacomodan), tamaño y espaciado — nunca un dato del cliente
+  (logos, portada, accesos rápidos, colores, fuentes).
+- **Objetivos táctiles ~40px** en los controles de solo ícono del modo
+  admin (cerrar modal, ocultar bloque, arrastrar, editar/eliminar,
+  reordenar, favicon de logo, navegación del calendario) — logrado con
+  `padding` + `margin` negativo del mismo valor, para agrandar el área
+  clickeable sin agrandar el ícono visualmente ni mover el layout.
+- **`.admin-field input/textarea/select` a 16px**, no 14px: por debajo
+  de eso, Safari en iOS hace zoom automático de toda la página al
+  enfocar un campo — un input "chico" se sentía roto en mobile.
+- **Modales a pantalla completa en mobile.** El editor de imagen, el
+  editor de pieza de contenido y el editor genérico de listas comparten
+  la misma clase base (`.piece-modal`), así que un solo bloque de CSS
+  (`width:100vw; border-radius arriba; align al fondo`) los convierte a
+  los tres en una hoja inferior usable con el pulgar, sin tocar cada
+  modal por separado.
+- **Portada del cliente con prioridad visual en mobile:** en vez de
+  quedar encajonada dentro del padding del `.shell` (se sentía
+  "comprimida"), sangra hasta el borde de la pantalla con
+  `aspect-ratio` en vez de una altura fija.
+- **Compresión de imágenes subidas** (`js/admin.js`,
+  `resizeImageDataUrl`): toda imagen subida desde el panel (logo,
+  portada, favicon) se redimensiona al lado más largo (1280px) antes
+  de guardarse — sin esto, una foto de celular sin comprimir (varios MB
+  en base64) podía superar la cuota de `localStorage` (más chica en
+  mobile) y hacer que `RSStore.save()` fallara en silencio. Preserva
+  PNG (por transparencia) y usa JPEG para el resto.
+- **`saveChanges()` ya no limpia el estado "sin guardar" si
+  `RSStore.save()` devuelve `false`** — antes, un guardado fallido (por
+  ejemplo, por la razón anterior) se comportaba como exitoso en la UI:
+  la barra se cerraba y el cambio se perdía sin aviso real.
+
 ## Modo administrador (`js/admin.js`)
 
 - Se activa con `?admin=true`, ruta `/admin` (via `_redirects`), o

@@ -54,6 +54,30 @@
   let imageModalConfig = null;
   let isDirty = false;
 
+  // Achica una imagen subida al lado más largo (maxDim) antes de guardarla
+  // en CLIENT_DATA — sin esto, una foto de celular sin comprimir (varios MB
+  // en base64) puede superar la cuota de localStorage y hacer que save()
+  // falle en silencio, o simplemente volver la página lenta en mobile.
+  function resizeImageDataUrl(dataUrl, maxDim, mimeType) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if (width <= maxDim && height <= maxDim) { resolve(dataUrl); return; }
+        const scale = Math.min(maxDim / width, maxDim / height);
+        width = Math.round(width * scale);
+        height = Math.round(height * scale);
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL(mimeType, 0.85));
+      };
+      img.onerror = () => resolve(dataUrl);
+      img.src = dataUrl;
+    });
+  }
+
   /* ---------------------------------------------------------- */
   /* Estado del modo admin (persistido solo en esta sesión)     */
   /* ---------------------------------------------------------- */
@@ -158,10 +182,17 @@
 
   function saveChanges() {
     RSStore.save(window.CLIENT_DATA).then((ok) => {
+      // Si falla (ej: cuota de localStorage superada por una imagen
+      // grande), NO se limpia el estado "sin guardar" — si lo
+      // hiciéramos, la barra desaparecería y beforeunload dejaría de
+      // avisar, y el cambio se perdería sin que el usuario se entere.
+      if (!ok) {
+        showToast("No se pudo guardar — probá de nuevo", "error");
+        return;
+      }
       isDirty = false;
       if (saveBarEl) saveBarEl.classList.remove("is-open");
-      if (ok) showToast("Cambios guardados");
-      else showToast("No se pudo guardar — probá de nuevo", "error");
+      showToast("Cambios guardados");
     });
   }
 
@@ -820,11 +851,19 @@
       if (!file) return;
       const reader = new FileReader();
       reader.onload = () => {
-        imageModalConfig.set(reader.result);
-        imageModalConfig.onSaved();
-        closeImageModal();
-        markDirty();
-        showToast("Imagen actualizada");
+        // Una foto de celular sin redimensionar puede pesar varios MB en
+        // base64 — supera la cuota de localStorage (guardado silenciosamente
+        // fallido, la imagen "desaparece" al recargar) y hace lenta la
+        // carga en mobile. Se achica al lado más largo antes de guardar,
+        // preservando PNG (por transparencia) y usando JPEG para el resto.
+        const mimeType = file.type === "image/png" ? "image/png" : "image/jpeg";
+        resizeImageDataUrl(reader.result, 1280, mimeType).then((finalDataUrl) => {
+          imageModalConfig.set(finalDataUrl);
+          imageModalConfig.onSaved();
+          closeImageModal();
+          markDirty();
+          showToast("Imagen actualizada");
+        });
       };
       reader.readAsDataURL(file);
     };

@@ -3,6 +3,59 @@
 Registro cronológico de cambios, más granular que
 [VERSIONES.md](VERSIONES.md). Orden: más reciente arriba.
 
+## 2026-07-12 (V3 Portal Vivo — Prioridad 1: Responsive completo)
+
+Pedido explícito: antes de seguir con funcionalidades nuevas (Centro de
+Actividad, Hero carrusel), el portal debía quedar 100% responsive —
+mobile first, sin regresiones en desktop/tablet, y sin ocultar
+contenido por CSS. Ver [PLAN_V3_PORTAL_VIVO.md](PLAN_V3_PORTAL_VIVO.md).
+
+- **Consolidación de breakpoints:** los 7 `@media` sueltos que había
+  (760/860/700/640px mezclados, cada uno resuelto cerca del componente
+  apenas se construyó) se reemplazaron por 2 bloques únicos al final de
+  `css/styles.css` — Tablet (`max-width:1024px`) y Mobile
+  (`max-width:640px`) — auditados componente por componente, no
+  parche por parche.
+- **Dos bugs reales encontrados y corregidos** (no solo estética) — ver
+  detalle en [BUGS.md](BUGS.md): imágenes subidas sin comprimir podían
+  superar la cuota de `localStorage` y "desaparecer" tras recargar
+  (fix: redimensionado a 1280px antes de guardar); un guardado fallido
+  se marcaba como exitoso en la UI, perdiendo el cambio en silencio
+  (fix: el estado "sin guardar" solo se limpia si `RSStore.save()`
+  devuelve éxito).
+- **Objetivos táctiles:** todos los botones de solo ícono en modo admin
+  (cerrar modal, ocultar bloque, arrastrar, editar/eliminar ítem de
+  lista, flechas de reorden, favicon del logo de proyecto, navegación
+  del calendario) pasan a un área táctil real de ~40px, sin agrandar
+  visualmente los íconos (relleno invisible vía `padding`/`margin`
+  negativo). Inputs/selects del panel admin pasan a 16px (antes 14px):
+  por debajo de eso, Safari en iOS hace zoom automático de toda la
+  página al enfocar un campo.
+- **Modales full-screen en mobile:** editor de imagen, editor de pieza
+  de contenido y editor genérico de listas (los tres comparten
+  `.piece-modal`) pasan a una sola hoja inferior a pantalla completa en
+  mobile — un solo cambio de CSS cubre los tres, en vez de tres
+  arreglos separados.
+- **Hero con prioridad visual en mobile:** la portada del cliente
+  (`.hero__cover`) sangra hasta el borde de la pantalla en mobile en
+  vez de quedar encajonada dentro del padding del `.shell` — se siente
+  inmediata, no "comprimida".
+- **Meta-row (Sector/Idioma/Público/Plan) y stats del header** pasan de
+  `flex-wrap` con gap grande (huecos irregulares) a una grilla de 2
+  columnas prolija en mobile.
+- **Nada se oculta por CSS:** ningún dato del cliente (logos, portada,
+  accesos rápidos, colores, fuentes) desaparece en mobile — solo
+  cambia tamaño/proporción/posición. La única regla `display:none` que
+  existía en un media query (`.admin-mode-badge span`) resultó ser
+  código muerto (nunca hubo un `<span>` ahí) — se eliminó al
+  consolidar, sin cambio de comportamiento real.
+- Verificado con Chromium headless + Playwright en 5 dispositivos:
+  Desktop, iPhone SE, iPhone 13, Pixel 7, iPad. Sin errores de consola,
+  sin requests fallidos, sin overflow horizontal en ningún viewport.
+  Flujo de subida de imagen probado con una foto sintética de 3.9MB
+  (quedó en ~192KB). Regresión completa (público + admin + editor de
+  listas + Theme Builder) sin errores.
+
 ## 2026-07-11 (Portal Cliente V2 — Fase 3: Header Inteligente)
 
 - **Feature:** accesos rápidos configurables integrados al encabezado
