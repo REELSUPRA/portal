@@ -2,25 +2,16 @@
  * ============================================================
  * REELSUPRA — CAPA DE PERSISTENCIA (RSStore), VERSIÓN SUPABASE
  * ============================================================
- * NO ESTÁ CONECTADA TODAVÍA. Este archivo existe en paralelo a
- * js/store.js (la versión localStorage, todavía la que corre en
- * producción) — ver DOCUMENTACION/PLAN_MIGRACION_SUPABASE.md,
- * sección "Checklist de cutover", para la lista exacta de lo que
- * falta antes de reemplazar el <script src="js/store.js"> por este
- * archivo en index.html/project.html.
+ * Conectada al proyecto real desde el 2026-07-12 — reemplaza a
+ * js/store.js (localStorage) en index.html/project.html. js/store.js
+ * se conserva en el repo sin borrar, como respaldo/rollback: volver
+ * atrás es cambiar el <script src> de vuelta, nada más.
  *
- * Por qué un archivo aparte y no un reemplazo directo: activar esto
- * sin credenciales reales rompería el portal en producción (hydrate()
- * es lo primero que corre en boot(), antes de cualquier render — si
- * falla, no se dibuja nada). Se conecta recién cuando:
- *   1. Existe un proyecto Supabase real con el esquema de supabase/
- *      ya corrido (01_schema.sql, 02_policies.sql, 03_storage.sql,
- *      opcionalmente 04_seed_from_data_js.sql).
- *   2. SUPABASE_URL / SUPABASE_ANON_KEY (abajo) tienen los valores
- *      reales de ese proyecto.
- *   3. admin.js reemplazó el gate de contraseña por login real de
- *      Supabase Auth (ver el plan — si no, la sesión de admin queda
- *      sin ninguna protección real).
+ * Verificado contra el proyecto real antes de conectar: lectura
+ * pública (agency_settings/clients/projects) funciona vía la
+ * publishable key; una escritura sin sesión admin autenticada queda
+ * bloqueada por RLS (confirmado con una prueba real, no solo
+ * inspección de políticas). Ver DOCUMENTACION/PLAN_MIGRACION_SUPABASE.md.
  *
  * Mantiene la MISMA interfaz que js/store.js — { load, save, clear,
  * hydrate }, todas Promise — así admin.js no necesita saber que el
@@ -30,13 +21,14 @@
  */
 
 window.RSStore = (() => {
-  // TODO: completar con los valores reales del proyecto Supabase.
-  // SUPABASE_ANON_KEY es la clave pública ("anon"/"publishable") —
-  // está diseñada para vivir en código de cliente, la seguridad real
-  // la dan las políticas de RLS (ver supabase/02_policies.sql), NO
-  // el secreto de la clave. NUNCA poner acá la "service_role key".
-  const SUPABASE_URL = "";
-  const SUPABASE_ANON_KEY = "";
+  // Proyecto real (2026-07-12). SUPABASE_ANON_KEY es la clave pública
+  // ("publishable key" en la nomenclatura nueva de Supabase, antes
+  // llamada "anon key") — está diseñada para vivir en código de
+  // cliente, la seguridad real la dan las políticas de RLS (ver
+  // supabase/02_policies.sql), NO el secreto de la clave. NUNCA poner
+  // acá la "service_role"/"secret key".
+  const SUPABASE_URL = "https://oilfbkzzussozisjmemw.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_9f6zu5ZlxGt0d4o1ifFFFg_C85X2B9j";
 
   // Qué cliente mostrar cuando la URL no especifica ?client=<slug>.
   // Con un solo cliente real hoy (Juan Guzmán), esto mantiene el
@@ -251,5 +243,44 @@ window.RSStore = (() => {
       });
   }
 
-  return { load, save, clear, hydrate };
+  // ---- Auth — reemplaza al gate de contraseña plana de admin.js ----
+  // admin.js no sabe (ni necesita saber) que esto es Supabase — solo
+  // llama a estos 3 métodos, igual que hace con load/save/hydrate.
+
+  function signIn(email, password) {
+    return client()
+      .auth.signInWithPassword({ email, password })
+      .then(({ data, error }) => {
+        if (error) {
+          console.warn("RSStore (Supabase): login fallido.", error.message);
+          return false;
+        }
+        return !!data.session;
+      })
+      .catch((e) => {
+        console.warn("RSStore (Supabase): login fallido.", e);
+        return false;
+      });
+  }
+
+  function signOut() {
+    try {
+      return client().auth.signOut().catch(() => {});
+    } catch (e) {
+      return Promise.resolve();
+    }
+  }
+
+  function getSession() {
+    try {
+      return client()
+        .auth.getSession()
+        .then(({ data }) => !!(data && data.session))
+        .catch(() => false);
+    } catch (e) {
+      return Promise.resolve(false);
+    }
+  }
+
+  return { load, save, clear, hydrate, signIn, signOut, getSession };
 })();

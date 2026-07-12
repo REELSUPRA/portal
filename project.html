@@ -35,21 +35,27 @@
     </div>
   </footer>
 
+  <!-- Seed/fallback si Supabase no responde — ver js/store.supabase.js -->
   <script src="js/data.js"></script>
-  <script src="js/store.js"></script>
+  <!-- Cliente de Supabase (fuente de verdad real desde el 2026-07-12) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="js/store.supabase.js"></script>
   <script src="js/render.js"></script>
   <script src="js/admin.js"></script>
   <script>
     function boot() {
-      RSStore.hydrate().then(() => {
-        RS.applyTheme();
-        RS.applyBranding();
-        RSAdmin.detectAdminMode();
-        RS.renderTopbar({ showBack: true });
-        RS.renderProjectDetail();
-        RS.hydrateIcons();
-        RSAdmin.init();
-      });
+      RSStore.hydrate()
+        .then(() => {
+          RS.applyTheme();
+          RS.applyBranding();
+          return RSAdmin.detectAdminMode(); // async: puede esperar un login real
+        })
+        .then(() => {
+          RS.renderTopbar({ showBack: true });
+          RS.renderProjectDetail();
+          RS.hydrateIcons();
+          RSAdmin.init();
+        });
     }
     document.addEventListener("DOMContentLoaded", boot);
   </script>

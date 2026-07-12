@@ -2,22 +2,22 @@
  * ============================================================
  * REELSUPRA — MODO ADMINISTRADOR
  * ============================================================
- * No hay backend: los cambios se guardan en localStorage de este
- * navegador (vía js/store.js) al tocar "Guardar cambios" — persisten
- * entre visitas en ese mismo dispositivo, pero no se sincronizan a
- * otros. Para que un cambio sea la nueva base para cualquier
- * dispositivo/cliente, usar "Exportar JSON" y reemplazar el
- * contenido de js/data.js.
+ * Backend real desde el 2026-07-12: los cambios se guardan en Supabase
+ * (vía js/store.supabase.js) al tocar "Guardar cambios" — persisten
+ * para cualquier dispositivo/navegador, no solo el que hizo el cambio.
+ * js/data.js/js/store.js (localStorage) quedan solo como fallback si
+ * Supabase no responde — ver DOCUMENTACION/PLAN_MIGRACION_SUPABASE.md.
  *
  * Se activa con:
  *   - ?admin=true en la URL
  *   - /admin en la ruta (Netlify redirige /admin -> index.html)
  *   - Ctrl/Cmd + Shift + A en cualquier momento
- * ...pidiendo antes una contraseña simple (agency.adminPassphrase en
- * data.js). Esto NO es autenticación real — vive en un archivo JS
- * público, cualquiera con conocimientos técnicos puede leerla. Su
- * único objetivo es evitar que un cliente entre por accidente al
- * modo admin, no proteger contra un acceso intencional.
+ * ...pidiendo antes un login real (email + contraseña) contra
+ * Supabase Auth. Server-side de verdad: Row Level Security rechaza
+ * cualquier escritura sin una sesión autenticada con rol admin, sin
+ * importar qué haga el navegador — a diferencia de la contraseña
+ * plana que usaba la V1/V2, esto no se puede saltear desde la consola
+ * del navegador.
  *
  * En modo administrador, sobre la página de un proyecto, además:
  *   - Los bloques (Objetivos, Roadmap, Calendario, etc.) se
@@ -79,8 +79,17 @@
   }
 
   /* ---------------------------------------------------------- */
-  /* Estado del modo admin (persistido solo en esta sesión)     */
+  /* Estado del modo admin — login real contra Supabase Auth    */
   /* ---------------------------------------------------------- */
+  /* Reemplaza a la contraseña en texto plano (agency.adminPassphrase,
+     ahora vestigial en js/data.js — no se usa desde este cambio,
+     2026-07-12). La sesión real la persiste el propio cliente de
+     Supabase (su storage interno, no rsClientDataOverride) — por eso
+     ya no hace falta sessionStorage.rsAdminAuthed acá: RSStore.getSession()
+     es la fuente de verdad. Nota: si Supabase no responde, el portal
+     cae a js/data.js de solo lectura (ver store.supabase.js) y el
+     login de admin tampoco funciona en ese estado — aceptado a
+     propósito, ver PLAN_MIGRACION_SUPABASE.md. */
 
   function wantsAdminViaUrl() {
     const params = new URLSearchParams(window.location.search);
@@ -89,44 +98,94 @@
     return false;
   }
 
-  function isAuthed() {
-    return sessionStorage.getItem("rsAdminAuthed") === "true";
-  }
-
   function setAdminMode(value) {
     window.RS_ADMIN_MODE = value;
-    sessionStorage.setItem("rsAdminAuthed", value ? "true" : "false");
   }
 
-  // Gate simple: no es seguridad real, evita el acceso accidental.
-  // Si el cliente ya se autenticó en esta sesión de navegador, no
-  // vuelve a preguntar.
-  function verifyPassphrase() {
-    const expected = (window.CLIENT_DATA.agency && window.CLIENT_DATA.agency.adminPassphrase) || "";
-    if (!expected) return true;
-    const attempt = window.prompt("Contraseña de administrador:");
-    if (attempt === expected) return true;
-    if (attempt !== null) showToast("Contraseña incorrecta", "error");
-    return false;
+  let loginModalEl = null;
+  let loginModalResolve = null;
+
+  function ensureLoginModal() {
+    if (loginModalEl) return;
+    loginModalEl = document.createElement("div");
+    loginModalEl.className = "piece-modal-overlay";
+    loginModalEl.innerHTML = `<div class="piece-modal">
+      <div class="admin-panel__header">
+        <div class="admin-panel__title">${RS.icon("lock")} Acceso administrador</div>
+        <button class="admin-panel__close" id="loginModalClose">${RS.icon("x")}</button>
+      </div>
+      <div class="admin-panel__body">
+        <div class="admin-field">
+          <label>Email</label>
+          <input type="email" id="loginEmailInput" autocomplete="username" />
+        </div>
+        <div class="admin-field">
+          <label>Contraseña</label>
+          <input type="password" id="loginPasswordInput" autocomplete="current-password" />
+        </div>
+        <button class="btn btn--primary" id="loginSubmitBtn" style="width:100%; justify-content:center;">${RS.icon("log-in")} Ingresar</button>
+      </div>
+    </div>`;
+    document.body.appendChild(loginModalEl);
+
+    const submit = () => {
+      const email = loginModalEl.querySelector("#loginEmailInput").value.trim();
+      const password = loginModalEl.querySelector("#loginPasswordInput").value;
+      if (!email || !password) return;
+      RSStore.signIn(email, password).then((ok) => {
+        if (ok) closeLoginModal(true);
+        else showToast("Email o contraseña incorrectos", "error");
+      });
+    };
+
+    loginModalEl.addEventListener("click", (e) => { if (e.target === loginModalEl) closeLoginModal(false); });
+    loginModalEl.querySelector("#loginModalClose").addEventListener("click", () => closeLoginModal(false));
+    loginModalEl.querySelector("#loginSubmitBtn").addEventListener("click", submit);
+    loginModalEl.querySelector("#loginPasswordInput").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") submit();
+    });
   }
 
+  function openLoginModal() {
+    ensureLoginModal();
+    loginModalEl.querySelector("#loginEmailInput").value = "";
+    loginModalEl.querySelector("#loginPasswordInput").value = "";
+    loginModalEl.classList.add("is-open");
+    RS.hydrateIcons();
+    return new Promise((resolve) => { loginModalResolve = resolve; });
+  }
+
+  function closeLoginModal(success) {
+    if (loginModalEl) loginModalEl.classList.remove("is-open");
+    if (loginModalResolve) { loginModalResolve(success); loginModalResolve = null; }
+  }
+
+  // Devuelve una Promise<boolean> — antes era síncrono (window.prompt
+  // bloqueaba), ahora depende de una llamada real a Supabase Auth.
   function tryActivateAdmin() {
-    if (isAuthed()) { setAdminMode(true); return true; }
-    if (verifyPassphrase()) { setAdminMode(true); return true; }
-    return false;
+    return openLoginModal().then((success) => {
+      if (success) setAdminMode(true);
+      return success;
+    });
   }
 
+  // Devuelve una Promise — los call sites que antes revisaban
+  // window.RS_ADMIN_MODE justo después de llamar a esta función ahora
+  // tienen que encadenar un .then() (ver init()).
   function toggleAdminMode() {
     if (window.RS_ADMIN_MODE) {
-      setAdminMode(false);
-      refreshPage();
-      showToast("Modo administrador desactivado");
-      return;
+      return RSStore.signOut().then(() => {
+        setAdminMode(false);
+        refreshPage();
+        showToast("Modo administrador desactivado");
+      });
     }
-    if (!tryActivateAdmin()) return;
-    refreshPage();
-    showToast("Modo administrador activado");
-    if (document.getElementById("blocksContainer")) initBlockDragDrop();
+    return tryActivateAdmin().then((ok) => {
+      if (!ok) return;
+      refreshPage();
+      showToast("Modo administrador activado");
+      if (document.getElementById("blocksContainer")) initBlockDragDrop();
+    });
   }
 
   function refreshPage() {
@@ -951,8 +1010,8 @@
 
   function init() {
     // El estado de RS_ADMIN_MODE ya lo resolvió detectAdminMode() al
-    // principio del boot() de la página (incluye el gate de contraseña
-    // si corresponde) — no se vuelve a pedir acá.
+    // principio del boot() de la página (incluye el login real de
+    // Supabase Auth si corresponde) — no se vuelve a pedir acá.
 
     // Delegado sobre #topbar (que nunca se reemplaza) en lugar del botón
     // en sí (que se recrea cada vez que se vuelve a dibujar el topbar).
@@ -961,18 +1020,24 @@
       topbarEl.dataset.adminBound = "true";
       topbarEl.addEventListener("click", (e) => {
         if (!e.target.closest("#adminToggle")) return;
-        if (!window.RS_ADMIN_MODE) { toggleAdminMode(); if (window.RS_ADMIN_MODE) openPanel(); }
-        else { openPanel(); }
+        if (!window.RS_ADMIN_MODE) {
+          toggleAdminMode().then(() => { if (window.RS_ADMIN_MODE) openPanel(); });
+        } else {
+          openPanel();
+        }
       });
     }
 
     document.addEventListener("keydown", (e) => {
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "a") {
         e.preventDefault();
-        if (!window.RS_ADMIN_MODE) toggleAdminMode();
-        if (window.RS_ADMIN_MODE) openPanel();
+        if (!window.RS_ADMIN_MODE) {
+          toggleAdminMode().then(() => { if (window.RS_ADMIN_MODE) openPanel(); });
+        } else {
+          openPanel();
+        }
       }
-      if (e.key === "Escape") { closePanel(); closePieceModal(); closeImageModal(); closeListEditorModal(); }
+      if (e.key === "Escape") { closePanel(); closePieceModal(); closeImageModal(); closeListEditorModal(); closeLoginModal(false); }
     });
 
     if (document.getElementById("blocksContainer")) initBlockDragDrop();
@@ -982,10 +1047,15 @@
     if (wantsAdminViaUrl() && window.RS_ADMIN_MODE) openPanel();
   }
 
+  // Devuelve una Promise — boot() (index.html/project.html) espera a
+  // que resuelva antes de dibujar nada, igual que antes esperaba a
+  // que window.prompt() (síncrono) devolviera algo.
   function detectAdminMode() {
-    if (isAuthed()) { setAdminMode(true); return; }
-    if (wantsAdminViaUrl()) { tryActivateAdmin(); return; }
-    setAdminMode(false);
+    return RSStore.getSession().then((hasSession) => {
+      if (hasSession) { setAdminMode(true); return; }
+      if (wantsAdminViaUrl()) return tryActivateAdmin();
+      setAdminMode(false);
+    });
   }
 
   window.RSAdmin = { init, toggleAdminMode, detectAdminMode };

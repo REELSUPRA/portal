@@ -201,5 +201,15 @@ Cliente (`profiles.role = 'client'`, policies ya escritas pero
 comentadas en `supabase/02_policies.sql`) — no bloquea esta fase por
 pedido explícito ("no hace falta terminar todo el sistema de login").
 
-**Bloqueado en:** credenciales de un proyecto Supabase real — ver
-"Bloqueado en" en [PLAN_MIGRACION_SUPABASE.md](PLAN_MIGRACION_SUPABASE.md).
+**Cutover realizado (2026-07-12):** con el proyecto Supabase real
+creado, el esquema corrido y verificado, y las credenciales
+(publishable key) entregadas, se conectó `js/store.supabase.js` en
+producción — `index.html`/`project.html` ya leen de Supabase, no de
+`localStorage`. El gate de contraseña se reemplazó por el login real
+descripto en la Decisión 4, en el mismo cambio (nunca uno sin el
+otro, como se documentó desde el principio). Verificado contra el
+proyecto real: lectura pública funciona, una escritura sin sesión
+admin fue rechazada por RLS (prueba real, no solo inspección de
+políticas), el portal carga los datos reales en desktop y mobile sin
+errores. Detalle completo en
+[PLAN_MIGRACION_SUPABASE.md](PLAN_MIGRACION_SUPABASE.md).

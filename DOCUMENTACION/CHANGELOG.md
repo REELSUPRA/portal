@@ -3,6 +3,45 @@
 Registro cronológico de cambios, más granular que
 [VERSIONES.md](VERSIONES.md). Orden: más reciente arriba.
 
+## 2026-07-12 (Migración a Supabase — cutover a producción)
+
+Con el proyecto Supabase real creado por el cliente, el esquema
+corrido (`01_schema.sql`–`04_seed_from_data_js.sql`) y verificado, y
+las credenciales entregadas, se completó el cutover. Ver
+[PLAN_MIGRACION_SUPABASE.md](PLAN_MIGRACION_SUPABASE.md).
+
+- **`js/store.supabase.js` conectado** en `index.html`/`project.html`
+  (reemplaza a `js/store.js`/localStorage). `js/store.js` y
+  `js/data.js` se conservan sin borrar — `data.js` es ahora el
+  fallback si Supabase no responde, `js/store.js` queda de referencia
+  para rollback.
+- **Login de admin real**: la contraseña plana (`agency.adminPassphrase`,
+  ahora vestigial) se reemplazó por un modal de email + contraseña
+  contra Supabase Auth (`RSStore.signIn/signOut/getSession`, nuevos en
+  la interfaz de `RSStore`). Este cambio se hizo *junto* con el
+  anterior a propósito — activar Supabase para lectura sin este login
+  hubiera dejado el modo admin sin ninguna protección real (el objeto
+  `agency` que devuelve Supabase no tiene contraseña).
+- `detectAdminMode()`/`toggleAdminMode()`/`tryActivateAdmin()` pasaron
+  de síncronos (`window.prompt()` bloqueante) a `Promise` — `boot()`
+  en ambos HTML encadena el resultado antes de renderizar.
+- **Verificado contra el proyecto real, no simulado:**
+  - Lectura pública (`agency_settings`/`clients`/`projects`) vía la
+    publishable key — funciona, devuelve los datos reales del seed.
+  - Escritura sin sesión admin: un `PATCH` real fue aceptado con 204
+    pero **no modificó nada** (RLS filtró la fila) — confirmado
+    releyendo el dato después.
+  - `profiles` devuelve vacío para una request sin sesión — RLS
+    correcto.
+  - Portal completo (desktop + iPhone 13) cargando los datos reales de
+    Juan Guzmán y sus 2 proyectos, sin errores de consola ni requests
+    fallidos, `window.RS_SUPABASE_OFFLINE` en `false`.
+  - Login con credenciales incorrectas: rechazado, toast de error,
+    `RS_ADMIN_MODE` se mantiene en `false`.
+  - **No verificado** (requiere la contraseña real del admin, que no
+    corresponde compartir): login exitoso y guardado end-to-end.
+    Pendiente de que el admin lo confirme una vez.
+
 ## 2026-07-12 (Migración a Supabase — análisis, diseño e infraestructura)
 
 Disparado por: el cliente reportó que sus cambios (logos, portada) no

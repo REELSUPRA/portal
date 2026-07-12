@@ -231,54 +231,70 @@ de la V3, ver [PLAN_V3_PORTAL_VIVO.md](PLAN_V3_PORTAL_VIVO.md)):
   ejemplo, por la razón anterior) se comportaba como exitoso en la UI:
   la barra se cerraba y el cambio se perdía sin aviso real.
 
-## Migración de persistencia a Supabase (en curso, no conectada todavía)
+## Persistencia: Supabase (desde 2026-07-12)
 
-Todo lo descripto en esta sección ("Modo administrador") de acá abajo
-sigue siendo exactamente así **en producción, hoy**. Hay una migración
-en curso de `localStorage` a Supabase (disparada porque los cambios
-guardados no se veían desde otro dispositivo — vivían solo en el
-navegador donde se guardaron) — el plan completo, el esquema SQL, las
-políticas de RLS y el código nuevo (`js/store.supabase.js`, en
-paralelo a `js/store.js`, sin conectar) están en
-[PLAN_MIGRACION_SUPABASE.md](PLAN_MIGRACION_SUPABASE.md) y en la
-carpeta `supabase/`. No se activa hasta tener un proyecto Supabase
-real — activar `js/store.supabase.js` sin credenciales reales
-rompería el portal en producción (`hydrate()` corre antes de
-cualquier render).
+`js/store.supabase.js` reemplazó a `js/store.js` (localStorage) en
+`index.html`/`project.html`. Interfaz idéntica
+(`{load, save, clear, hydrate}` + `{signIn, signOut, getSession}`
+nuevos para Auth) — `admin.js`/`render.js` no cambiaron su forma de
+llamar a `RSStore`, solo cambió qué hay detrás. `js/store.js` y
+`js/data.js` se conservan sin borrar: `data.js` pasó a ser el
+fallback si Supabase no responde (`hydrate()` deja lo que ya cargó
+ese `<script>` en vez de romper la página); `js/store.js` queda como
+referencia de rollback (revertir es cambiar el `<script src>` de
+vuelta, más revertir el login — están acoplados a propósito, ver
+[PLAN_MIGRACION_SUPABASE.md](PLAN_MIGRACION_SUPABASE.md)).
+
+**Esquema real:** cáscara relacional (`clients`/`projects`, con RLS)
++ contenido de cada lista como `jsonb` idéntico a la forma de
+`CLIENT_DATA` de siempre — cero cambios en `LIST_SCHEMAS`/
+`BLOCK_DEFS`/Theme Builder. Detalle completo y SQL en `supabase/` y en
+el plan.
+
+**Verificado contra el proyecto real** (no simulado): lectura pública
+de `clients`/`projects` funciona vía la publishable key; una
+escritura sin sesión admin fue rechazada por RLS (probado con un
+`PATCH` real); el portal carga los datos reales de Juan Guzmán y sus
+2 proyectos en desktop y mobile, sin errores de consola ni requests
+fallidos, con `window.RS_SUPABASE_OFFLINE` en `false` (confirmando que
+no cayó al fallback). El login de admin (modal nuevo, ver abajo) fue
+probado contra Supabase Auth real con credenciales incorrectas
+(rechazadas correctamente); el login con las credenciales reales del
+admin y el guardado end-to-end quedan para que el propio admin los
+confirme una vez (ver "Pendiente" en el plan) — no es algo que se
+pueda probar sin su contraseña real, por diseño.
 
 ## Modo administrador (`js/admin.js`)
 
 - Se activa con `?admin=true`, ruta `/admin` (via `_redirects`), o
-  `Ctrl/Cmd+Shift+A` — pidiendo antes `agency.adminPassphrase` vía
-  `window.prompt()` (una vez por sesión de navegador,
-  `sessionStorage.rsAdminAuthed`). **No es autenticación real**: la
-  contraseña vive en un archivo JS público: no protege contra un
-  acceso intencional, solo evita el accidental. Ver
+  `Ctrl/Cmd+Shift+A` — pidiendo un **login real** (modal con email +
+  contraseña, `RSStore.signIn()` contra Supabase Auth) desde el
+  2026-07-12. Ya no es una contraseña en texto plano dentro de un
+  archivo JS: Row Level Security rechaza cualquier escritura en el
+  servidor sin una sesión autenticada con `profiles.role = 'admin'`,
+  sin importar qué haga el navegador — a diferencia del gate anterior,
+  esto no se puede saltear desde la consola de desarrollador. Ver
   [DECISIONES.md](DECISIONES.md).
-- Estado en `window.RS_ADMIN_MODE`, persistido solo en
-  `sessionStorage` (no hay backend, no hay usuarios, no hay login real).
+- Estado en memoria: `window.RS_ADMIN_MODE` (booleano síncrono, lo
+  sigue leyendo todo el resto del código igual que antes). La sesión
+  real la persiste el propio cliente de Supabase en su storage
+  interno — ya no se usa `sessionStorage.rsAdminAuthed` para esto.
+  `RSStore.getSession()` es la fuente de verdad al arrancar
+  (`detectAdminMode()`, ahora async — `boot()` encadena su Promise
+  antes de renderizar).
 - Todo lo editable en modo admin marca el estado como "sin guardar" —
   aparece una barra inferior con un único botón "Guardar cambios"
   (`markDirty()`/`saveChanges()` en `admin.js`). Al guardar, persiste
-  vía `RSStore.save()` (`js/store.js` — hoy `localStorage`, por
-  navegador) y avisa con `beforeunload` si se intenta cerrar la
-  pestaña con cambios sin guardar. Al volver a entrar en ese mismo
-  navegador, `RSStore.hydrate()` reemplaza `CLIENT_DATA` con lo
-  guardado, antes de cualquier render (ver `boot()` en `index.html`/
-  `project.html`).
-- **`RSStore` es la única pieza que sabe dónde se guarda.** Cambiar el
-  destino (GitHub, Supabase, un backend propio) es reescribir
-  `js/store.js` — `admin.js` solo llama `load()`/`save()`/`hydrate()`,
-  nunca `localStorage` directamente. La interfaz ya es async
-  (`Promise`) aunque `localStorage` sea síncrono, para que ese cambio
-  futuro no toque la UI del admin.
-- **Limitación conocida:** `save()` guarda una foto completa de
-  `CLIENT_DATA`; `hydrate()` la reemplaza entera, sin merge. Si
-  `data.js` cambia después de un guardado local, la foto vieja gana en
-  ese navegador. Ver [DECISIONES.md](DECISIONES.md).
-- Para que un cambio local sea la nueva base para todos (otros
-  dispositivos, nuevo cliente): "Exportar JSON" y reemplazar
-  manualmente el objeto en `js/data.js`.
+  vía `RSStore.save()` (`js/store.supabase.js` — Supabase, para
+  cualquier dispositivo) y avisa con `beforeunload` si se intenta
+  cerrar la pestaña con cambios sin guardar.
+- **`RSStore` es la única pieza que sabe dónde se guarda** (y, desde
+  esta migración, también la única que sabe cómo se loguea un admin —
+  `signIn`/`signOut`/`getSession`, mismo criterio). `admin.js` nunca
+  llama a Supabase directamente.
+- **"Exportar JSON"** (botón del panel) queda como utilidad de
+  diagnóstico/backup manual — ya no es el mecanismo para propagar
+  cambios a otros dispositivos, eso ahora es automático al guardar.
 - Cubre hoy: reordenar/ocultar bloques (drag&drop), editar piezas de
   contenido (modal), cambiar logos/portada/favicon (modal de imagen
   genérico, `openImageModal`, upload o URL), Theme Builder completo

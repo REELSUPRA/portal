@@ -1,9 +1,12 @@
 # Plan — Migración a Supabase (V3, arquitectura de datos)
 
-Estado: **análisis y diseño completos, infraestructura preparada
-(SQL + código en paralelo). Cutover a producción bloqueado — falta un
-proyecto Supabase real con credenciales.** Ver "Bloqueado en" al
-final: es lo único que impide terminar esta fase hoy mismo.
+Estado: **cutover a producción realizado (2026-07-12).**
+`js/store.supabase.js` está conectado en `index.html`/`project.html`;
+el login de admin es real (Supabase Auth). Verificado contra el
+proyecto real: lectura pública, RLS bloqueando escritura sin sesión,
+portal completo en desktop/mobile sin errores. Queda un solo punto sin
+verificar — ver "Pendiente" al final — porque requiere la contraseña
+real del admin, que no corresponde compartir en el chat.
 
 ## 0. Por qué este documento no termina en "listo, ya está en producción"
 
@@ -276,25 +279,50 @@ En este orden exacto — cada paso depende del anterior:
   Supabase, misma interfaz que `js/store.js`, con fallback a `data.js`
   si Supabase no responde. **No conectado todavía** (ver sección 0).
 
-## Decisiones ya confirmadas (2026-07-12)
+## Decisiones confirmadas y ejecutadas (2026-07-12)
 
-- Login de admin: **email + contraseña** (sección 5).
-- Seed inicial: **arranca con los mismos placeholders que hoy tiene
-  `data.js`** (no se incorpora el `localStorage` de la PC) — el
-  logo/portada reales se vuelven a subir una vez el panel ya esté
-  guardando en Supabase, y ahí sí quedan persistidos de verdad, para
-  cualquier dispositivo.
+- Login de admin: **email + contraseña** (sección 5) — implementado,
+  reemplaza la contraseña plana.
+- Seed inicial: arrancó con los placeholders de `data.js` (sin
+  incorporar el `localStorage` viejo de la PC) — el logo/portada
+  reales se vuelven a subir ahora desde el panel, y quedan
+  persistidos de verdad en Supabase.
+- Cutover completo: esquema + RLS + storage corridos por el cliente en
+  su proyecto real, verificados; `js/store.supabase.js` conectado;
+  login real wireado en el mismo cambio.
 
-## Bloqueado en
+## Verificado (2026-07-12, contra el proyecto real — no simulado)
 
-Esto es lo único que falta para terminar y verificar esta fase:
+- Lectura pública de `agency_settings`/`clients`/`projects` vía la
+  publishable key: devuelve los datos reales del seed.
+- Escritura sin sesión admin: `PATCH` real contra `clients` — HTTP 204
+  pero **sin modificar el dato** (RLS filtró la fila; confirmado
+  releyendo después). `profiles` devuelve vacío sin sesión.
+- Portal completo (`index.html`, `project.html`) en Desktop e iPhone
+  13, cargando los datos reales de Juan Guzmán y sus 2 proyectos, sin
+  errores de consola ni requests fallidos, `RS_SUPABASE_OFFLINE` en
+  `false`.
+- Login con credenciales incorrectas contra Supabase Auth real:
+  rechazado correctamente, toast de error, no se activa el modo admin.
 
-1. **Un proyecto Supabase real** (plan gratuito alcanza para empezar)
-   — crealo en supabase.com y pasame la **Project URL** y la
-   **anon/public key** (Settings → API). Ambas son seguras de
-   compartir/pegar en código de cliente por diseño — la seguridad real
-   la da RLS, no el secreto de esa clave. **Nunca** la
-   `service_role key` — esa sí es secreta, no se pega en el código ni
-   se comparte por chat.
+## Pendiente
 
-Con eso, el checklist de la sección 7 es una sola sesión de trabajo.
+1. **Login exitoso + guardado end-to-end con las credenciales reales
+   del admin.** No es verificable por mí sin su contraseña real (no
+   corresponde pedirla ni compartirla en el chat). Paso sugerido para
+   el admin: entrar a `/admin`, loguearse con el email/contraseña que
+   ya creó, confirmar que el panel abre, editar algo chico (ej. un
+   texto), guardar, y volver a cargar el portal desde **otro
+   navegador o dispositivo** — ahí se cierra el objetivo original de
+   esta migración.
+2. **Imágenes a Storage** (sección 6 de este plan) — todavía no
+   implementado; los logos/portada siguen guardándose en base64
+   dentro de `CLIENT_DATA` (ya redimensionados a 1280px desde la fase
+   anterior, así que no rompen `localStorage` ni son gigantes, pero no
+   están en los buckets de Storage todavía).
+3. **"Exportar JSON"** sigue en el panel — no se quitó todavía (no era
+   necesario para el cutover de lectura/login; se puede sacar en
+   cualquier momento sin riesgo).
+4. La decisión de producto "un cliente por deployment vs. un portal
+   multi-cliente" (ver [DECISIONES.md](DECISIONES.md)) sigue abierta —
+   el esquema soporta cualquiera de las dos.
