@@ -3,6 +3,27 @@
 Registro cronológico de cambios, más granular que
 [VERSIONES.md](VERSIONES.md). Orden: más reciente arriba.
 
+## 2026-07-12 ("Acceso al Portal" — cutover de infraestructura)
+
+Columnas corridas, función desplegada y URL de autenticación
+corregida — infraestructura de "Acceso al Portal" lista para probar:
+
+- `05_client_access_columns.sql` corrido en el proyecto real.
+- Edge Function `manage-client-access` desplegada vía CLI
+  (`--project-ref`, autenticado con un Personal Access Token generado
+  solo para esta tarea y revocado al terminar). Verificada `ACTIVE` y
+  rechazando pedidos sin autenticación (401).
+- `site_url` de Supabase Auth corregido de `http://localhost:3000`
+  (valor por defecto, nunca configurado) a
+  `https://portalreelsupra.netlify.app` — sin este cambio, los emails
+  de invitación/restablecimiento de contraseña habrían llevado a
+  localhost. Corregido vía Management API antes de mandar la primera
+  invitación real.
+
+Pendiente: probar el flujo completo (dar acceso, reenviar, cambiar
+email, revocar, restaurar) desde el panel con un email propio — ver
+[PLAN_ACCESO_PORTAL.md](PLAN_ACCESO_PORTAL.md).
+
 ## 2026-07-12 ("Acceso al Portal" — gestión de clientes sin el dashboard de Supabase)
 
 Nueva sección "Acceso al portal" en el panel admin, más un selector de

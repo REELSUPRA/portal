@@ -69,32 +69,32 @@ Elegido y confirmado con el admin antes de implementar (ver
 - **`supabase/06_client_access_gate.sql`**: preparado, **sin correr**
   (ver sección 4).
 
-## 3. Pasos manuales pendientes (necesitan al admin — no puedo ejecutarlos yo)
+## 3. Checklist de cutover de esta fase
 
-1. Correr `supabase/05_client_access_columns.sql` en el SQL Editor de
-   Supabase (aditivo, no afecta nada de lo que ya funciona).
-2. Desplegar la Edge Function `manage-client-access`:
-   - Dashboard de Supabase → **Edge Functions** → **Deploy a new
-     function** → nombre `manage-client-access` → pegar el contenido
-     completo de `supabase/functions/manage-client-access/index.ts`.
-   - No hace falta configurar variables de entorno a mano:
-     `SUPABASE_URL`, `SUPABASE_ANON_KEY` y `SUPABASE_SERVICE_ROLE_KEY`
-     las inyecta Supabase automáticamente en toda Edge Function del
-     proyecto.
-   - Alternativa (CLI): `npx supabase functions deploy manage-client-access --project-ref oilfbkzzussozisjmemw`
-     — requiere `supabase login` con un access token personal (alcance
-     amplio sobre la cuenta). Igual que con el SQL en su momento, el
-     método del dashboard evita compartir ese token; se documenta la
-     alternativa por si el admin prefiere usarla él mismo.
-3. Probar con un email propio (nunca de un cliente real, según lo
-   pedido): abrir el panel admin → "Acceso al portal" → escribir el
-   email → "Dar acceso" → revisar la casilla → confirmar la invitación
-   → loguearse con la cuenta nueva → confirmar que el estado en el
-   panel pasa a "Invitado / con acceso".
-4. Revisar (una vez, no bloqueante) en el dashboard de Supabase →
-   **Authentication → URL Configuration** que el "Site URL" apunte a
-   `https://portalreelsupra.netlify.app`, para que el link del email de
-   invitación/restablecimiento redirija al dominio correcto.
+1. ✅ **Corrido (2026-07-12):** `supabase/05_client_access_columns.sql`
+   en el SQL Editor.
+2. ✅ **Desplegado (2026-07-12), vía CLI:** `npx supabase functions
+   deploy manage-client-access --project-ref oilfbkzzussozisjmemw`,
+   autenticado con un Personal Access Token generado solo para este
+   despliegue y revocado apenas terminó. Confirmado con `functions
+   list` (`status: ACTIVE`) y con un `POST` real sin `Authorization` →
+   `401` (rechaza correctamente lo no autenticado).
+3. ✅ **Site URL corregido (2026-07-12), vía Management API:** estaba
+   en el valor por defecto `http://localhost:3000` (los links de
+   invitación/restablecimiento habrían apuntado ahí). Actualizado a
+   `https://portalreelsupra.netlify.app`, con
+   `https://portalreelsupra.netlify.app/**` en la lista de redirects
+   permitidos.
+4. ⏳ **Pendiente — necesita al admin, no lo puedo hacer yo:** probar
+   el flujo completo desde el panel con un email propio (nunca de un
+   cliente real): Dar acceso → revisar la casilla → confirmar la
+   invitación → loguearse con la cuenta nueva → y desde el panel
+   probar también Reenviar invitación, Cambiar email, Revocar acceso y
+   Restaurar acceso. No puedo ejecutar esta parte yo mismo porque
+   requiere estar logueado como admin en el navegador con la
+   contraseña real — a diferencia del Personal Access Token temporal
+   de los pasos 2-3, esa es la cuenta real del admin y no correspondía
+   pedirla.
 
 ## 4. El gate real de lectura por cliente — todavía NO activado
 
