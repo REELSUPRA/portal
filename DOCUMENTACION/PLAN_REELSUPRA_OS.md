@@ -1,0 +1,186 @@
+# Plan — Evolución a "ReelSupra OS" (Dashboard admin + Acceso al Portal simple)
+
+Estado: **propuesta, sin implementar.** Ningún código se toca hasta que
+este documento se apruebe — pedido explícito del admin.
+
+## 0. Resumen ejecutivo
+
+Hoy el "modo administrador" vive **adentro** de la página de un
+cliente (`index.html?client=<slug>&admin=true`): para editar cualquier
+cosa hay que estar parado en la URL de ESE cliente. Con 1-2 clientes
+no se nota; con muchos, no hay forma de ver "todos mis clientes" de un
+vistazo, ni de crear uno nuevo, sin pasar por SQL a mano.
+
+La propuesta es agregar una **segunda superficie**, nueva:
+
+- **Portal Cliente** (`index.html` / `project.html`) — sigue siendo lo
+  que ya es: la vista de un cliente puntual, con su editor embebido.
+  **No se reescribe.**
+- **Dashboard ReelSupra** (nuevo, `dashboard.html`) — pantalla de
+  aterrizaje del admin: lista todos los clientes y proyectos, permite
+  crear clientes/proyectos nuevos, y gestionar accesos sin entrar a
+  cada cliente uno por uno. Desde ahí, "entrar a un cliente" te manda
+  al editor de siempre — no hay un editor de contenido nuevo, es el
+  mismo.
+
+Esto no es una migración de datos ni un cambio de arquitectura de
+Supabase — es una **superficie de administración nueva sobre las
+mismas tablas**, más una simplificación visual de lo que ya existe.
+
+---
+
+## 1. Arquitectura propuesta
+
+```
+Portal Cliente (sin cambios de fondo)
+├── index.html / project.html      → vista del cliente (?client=<slug>)
+│   └── modo admin embebido        → editor de ESE cliente (?admin=true)
+│       ├── Theme Builder, editor de listas, bloques  → SIN TOCAR
+│       └── Acceso al Portal        → simplificado (sección 3)
+
+Dashboard ReelSupra (nuevo)
+└── dashboard.html                 → login admin (reutiliza RSStore.signIn)
+    ├── Lista de clientes           → RSStore.listClients() (extendido)
+    │   ├── Acceso al Portal inline → mismo componente simplificado
+    │   └── "Entrar" → index.html?client=<slug>&admin=true
+    ├── Lista de proyectos          → RSStore.listProjectsLight() (nuevo)
+    ├── "+ Nuevo cliente"           → RSStore.createClient() (nuevo)
+    └── "+ Nuevo proyecto"          → RSStore.createProject() (nuevo)
+```
+
+**Principio central: el Dashboard es un mejor punto de entrada, no un
+editor nuevo.** Todo lo que hoy sabe editar contenido de un cliente
+(Theme Builder, bloques, listas, piezas de contenido) sigue viviendo
+exactamente donde está. El Dashboard resuelve "¿a quién quiero
+administrar?" — no "cómo se administra".
+
+Login: el Dashboard usa el mismo mecanismo que ya existe
+(`RSStore.signIn/getSession`, Supabase Auth) — se reutiliza el modal de
+login (se extrae a una función compartida para no duplicarlo entre
+`admin.js` y el nuevo `dashboard.js`).
+
+---
+
+## 2. Tablas necesarias
+
+**Ninguna tabla nueva.** `clients`, `projects`, `profiles`,
+`agency_settings` se mantienen tal cual — el Dashboard es una vista
+nueva sobre datos existentes, no un modelo de datos nuevo.
+
+Lo único a verificar/agregar: **políticas RLS de `insert`** para
+`clients` y `projects` restringidas a `is_admin()`. Hoy esas tablas
+tienen políticas de lectura (pública) y de escritura/`update` para
+admin, confirmadas en la migración original — falta confirmar si
+`insert` ya está cubierto o si hace falta un archivo SQL nuevo
+(`07_admin_insert_policies.sql`) con 2 policies (`clients: admin
+crea`, `projects: admin crea`). Se verifica al implementar, sin
+adivinar contenido que no se haya leído.
+
+---
+
+## 3. "Acceso al Portal" — simplificación final
+
+Se reemplaza el estado técnico (`sin_invitar`/`invitado`/`revocado`
+como texto) por una señal puramente visual, igual en el Dashboard y
+en el panel por-cliente (mismo componente, reutilizado en los dos
+lugares):
+
+| Estado interno | Se ve así |
+|---|---|
+| Sin acceso (`sin_invitar` o `revocado`) | Campo de email **vacío y editable** + botón **"Crear acceso"** |
+| Con acceso (`invitado`) | Campo de email **bloqueado** (solo lectura) + **"Editar email"** + **"Reenviar acceso"** + **"Revocar acceso"** |
+
+Sin badges de estado, sin IDs, sin distinguir "invitado" de
+"restaurado" — es exactamente la misma distinción binaria de hoy
+(`hasAccount` ya calculado en el código actual), solo que ahora **no
+se le muestra al admin ningún texto técnico**, se lee del estado visual
+del campo.
+
+**Se elimina como botón separado: "Restablecer contraseña".** Hace lo
+mismo que ya hace "Reenviar acceso" desde la perspectiva del cliente
+(recibe un link nuevo para (re)establecer su contraseña) — tener las
+dos es la clase de "acción innecesaria" que pediste sacar. El método
+`RSStore.resetPasswordForClient()` puede quedar sin usar o eliminarse
+del todo al implementar (se decide ahí, no cambia el plan).
+
+"Editar email": el campo pasa de bloqueado a editable al tocar el
+botón (in-place), con un único botón de confirmar — no una fila
+aparte con validaciones extra.
+
+---
+
+## 4. Cambios mínimos (para implementar, tras aprobar este plan)
+
+1. **`js/store.supabase.js`**:
+   - `listClients()`: agregar `portal_email`/`portal_access_status` al
+     `select` (ya se leen en el detalle de un cliente; para la lista
+     del Dashboard hace falta traerlos también acá).
+   - Nuevo `listProjectsLight()` — `select("id, slug, name, client_id, status")`,
+     **sin** las columnas `jsonb` pesadas (con cientos de clientes, traer
+     todo el contenido de todos los proyectos para una lista sería
+     desperdiciar ancho de banda sin necesidad).
+   - Nuevo `createClient({ name, slug })` — inserta con defaults vacíos
+     (`theme: {}`, `announcement: {active:false, text:''}`,
+     `portal_access_status: 'sin_invitar'`).
+   - Nuevo `createProject(clientId, { name, slug })` — inserta un
+     proyecto vacío asociado a ese cliente.
+2. **`js/admin.js`**: `buildPortalAccessSection()` rediseñada a la
+   tabla de la sección 3 (mismo archivo, componente único reutilizado
+   por `dashboard.js` — no se duplica lógica).
+3. **Nuevo `dashboard.html` + `js/dashboard.js`**: página nueva,
+   reutiliza CSS existente (`.admin-panel`, `.btn`, `.admin-field`,
+   `.admin-group`) en vez de inventar un lenguaje visual aparte.
+   Reutiliza el modal de login (extraído a función compartida).
+4. **`supabase/07_admin_insert_policies.sql`** (si hace falta tras
+   verificar 02_policies.sql): policies de `insert` para admin en
+   `clients`/`projects`.
+5. **CSS**: pase de jerarquía visual sobre `.admin-group` — fondo sutil
+   por sección (hoy es blanco sobre blanco con solo un borde),
+   espaciado más ajustado, y diferenciar visualmente la acción primaria
+   ("Crear acceso"/"Entrar") de las secundarias. Diseño concreto al
+   implementar, no en este documento.
+6. **`_redirects`** (opcional, baja prioridad): alias `/dashboard` →
+   `dashboard.html`, igual que existe `/admin` hoy. Puede esperar.
+
+---
+
+## 5. Qué se mantiene (sin tocar)
+
+- Supabase, Auth, RLS de lectura pública (el gate real sigue diferido
+  a v1.1, decisión ya tomada — no se reabre acá).
+- Esquema de tablas completo (`clients`, `projects`, `profiles`,
+  `agency_settings`).
+- Edge Function `manage-client-access` — mismas 5 acciones en el
+  backend (`invite/resend/grant/revoke/change_email`); lo que cambia
+  es solo cuáles se disparan desde la UI.
+- Todo el motor declarativo de contenido: `BLOCK_DEFS`, `LIST_SCHEMAS`,
+  `THEME_SCHEMA`, `QUICKLINK_TYPES`, editor genérico de listas, Theme
+  Builder — el Dashboard no los toca, solo los hace más fáciles de
+  encontrar.
+- `js/store.js` / `js/data.js` como fallback/rollback.
+- El panel por-cliente (`buildPanel()`) sigue siendo el editor de
+  contenido — el Dashboard lo antecede, no lo reemplaza.
+
+## 6. Qué se elimina
+
+- El texto de estado técnico ("Estado: invitado/revocado/sin
+  invitar") en Acceso al Portal.
+- El botón "Restablecer contraseña" como acción visible separada
+  (absorbido funcionalmente por "Reenviar acceso").
+
+---
+
+## 7. Decisiones confirmadas (2026-07-13) — plan aprobado
+
+1. **Ruta del Dashboard**: `dashboard.html` alcanza por ahora. El
+   alias `/dashboard` (paso 6 de la sección 4) queda pendiente, sin
+   prioridad — se puede agregar después sin costo.
+2. **Alcance de "asociar proyectos"**: solo **crear** un proyecto
+   nuevo ya asociado a un cliente. Mover un proyecto existente entre
+   clientes queda **fuera de alcance** de este bloque.
+3. **Un solo admin**: confirmado, sin roles/permisos múltiples. No se
+   agrega ningún modelo de permisos — `profiles.role='admin'` sigue
+   plano.
+
+Con esto, el plan queda **aprobado** — se pasa a implementación según
+la sección 4.
