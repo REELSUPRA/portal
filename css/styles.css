@@ -1133,6 +1133,71 @@ button {
   margin-top: 0;
 }
 
+/* Secciones colapsables del panel admin — <details>/<summary> nativos:
+   sin JS de toggle, accesibles por teclado, comportamiento estándar. */
+.admin-group {
+  border-bottom: 1px solid var(--rs-gray-100);
+  margin-bottom: var(--space-3);
+}
+
+.admin-group:last-of-type {
+  border-bottom: none;
+}
+
+.admin-group__summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  cursor: pointer;
+  list-style: none;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--rs-gray-300);
+  padding: var(--space-3) 0;
+}
+
+.admin-group__summary::-webkit-details-marker,
+.admin-group__summary::marker {
+  display: none;
+  content: "";
+}
+
+.admin-group__summary .icon {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  transition: transform var(--duration) var(--ease);
+}
+
+.admin-group[open] > .admin-group__summary .icon {
+  transform: rotate(180deg);
+}
+
+.admin-group__body {
+  padding-bottom: var(--space-4);
+}
+
+/* Botón-link para acciones secundarias poco frecuentes (ej: "Más
+   opciones" en Acceso al portal) — visualmente más liviano que un
+   .btn para no competir con las acciones primarias de la sección. */
+.admin-link-btn {
+  background: none;
+  border: none;
+  padding: var(--space-1) 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--rs-gray-300);
+  cursor: pointer;
+  text-align: left;
+}
+
+.admin-link-btn:hover {
+  color: var(--rs-black);
+}
+
 .admin-overlay {
   position: fixed;
   inset: 0;

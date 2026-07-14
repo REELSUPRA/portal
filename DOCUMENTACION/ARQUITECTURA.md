@@ -267,11 +267,15 @@ dispositivo. Los 5 pasos funcionaron. **Migración cerrada
 
 ### "Acceso al Portal" (gestión de clientes sin el dashboard de Supabase)
 
-Desde 2026-07-12 (en curso, ver [PLAN_ACCESO_PORTAL.md](PLAN_ACCESO_PORTAL.md)):
-el panel admin tiene un selector de clientes y, por cada cliente, una
-sección "Acceso al portal" (invitar, reenviar invitación, restablecer
-contraseña, revocar/restaurar acceso, cambiar email) — sin entrar
-nunca al dashboard de Supabase.
+Desde 2026-07-12, simplificado 2026-07-13 (ver
+[PLAN_ACCESO_PORTAL.md](PLAN_ACCESO_PORTAL.md)): el panel admin tiene
+un selector de clientes y, por cada cliente, una sección "Acceso al
+portal" — sin entrar nunca al dashboard de Supabase. La UI muestra un
+solo botón **"Dar acceso"** cuando el cliente no tiene acceso (el
+sistema decide internamente si es invitación nueva o restauración
+según si ya tiene una cuenta creada); "Reenviar invitación"/"Quitar
+acceso" cuando ya lo tiene; "Cambiar email"/"Restablecer contraseña"
+detrás de "Más opciones".
 
 - Las acciones privilegiadas (crear cuenta, cambiar email de otro
   usuario) necesitan la Auth Admin API, que requiere la
@@ -292,9 +296,12 @@ nunca al dashboard de Supabase.
   Function; `RSStore.save()`/`clientToRow()` nunca las tocan.
 - El gate real de lectura por cliente (retirar la lectura pública de
   `clients`/`projects`, `supabase/06_client_access_gate.sql`) está
-  preparado pero **sin activar** — requiere invitar antes al cliente
-  real y construir un estado "sin acceso" en el frontend. Ver el plan
-  para el detalle y las condiciones de activación.
+  preparado pero **diferido a v1.1, decisión explícita** — requiere
+  invitar antes al cliente real y construir un estado "sin acceso" en
+  el frontend, y no aporta nada práctico todavía con un solo cliente
+  real. v1.0 cierra con "Acceso al Portal" funcionando como gestión de
+  cuentas, sin el aislamiento de lectura activo. Ver el plan y
+  [DECISIONES.md](DECISIONES.md) para el detalle.
 
 ## Modo administrador (`js/admin.js`)
 
@@ -324,9 +331,12 @@ nunca al dashboard de Supabase.
   esta migración, también la única que sabe cómo se loguea un admin —
   `signIn`/`signOut`/`getSession`, mismo criterio). `admin.js` nunca
   llama a Supabase directamente.
-- **"Exportar JSON"** (botón del panel) queda como utilidad de
-  diagnóstico/backup manual — ya no es el mecanismo para propagar
-  cambios a otros dispositivos, eso ahora es automático al guardar.
+- **"Exportar JSON"** se quitó del panel (2026-07-13): era el mecanismo
+  para propagar cambios a otros dispositivos en la era pre-Supabase,
+  hoy eso es automático al guardar y el botón no cumplía ningún rol.
+  El panel se reorganizó además en secciones colapsables
+  (`collapsibleGroup()`) — ver [PLAN_ACCESO_PORTAL.md](PLAN_ACCESO_PORTAL.md)
+  sección 5.
 - Cubre hoy: reordenar/ocultar bloques (drag&drop), editar piezas de
   contenido (modal), cambiar logos/portada/favicon (modal de imagen
   genérico, `openImageModal`, upload o URL), Theme Builder completo

@@ -1,10 +1,11 @@
 # Plan — "Acceso al Portal" (gestión de clientes sin el dashboard de Supabase)
 
-Estado: **implementado en código (2026-07-12), pendiente de 2 pasos
-manuales del admin (correr un SQL aditivo + desplegar la Edge
-Function) y de la prueba end-to-end con un email propio.** El gate
-real de lectura por cliente (`06_client_access_gate.sql`) sigue **sin
-activar** — ver sección 4.
+Estado: **infraestructura desplegada y panel simplificado
+(2026-07-13). Pendiente: resolver un email de invitación que llegó
+rechazado (`otp_expired`, en diagnóstico — ver sección 3) y, recién
+después, la prueba end-to-end con un email propio.** El gate real de
+lectura por cliente (`06_client_access_gate.sql`) queda **diferido a
+v1.1**, decisión explícita — ver sección 4.
 
 ## 1. Por qué esta arquitectura
 
@@ -56,13 +57,18 @@ Elegido y confirmado con el admin antes de implementar (ver
   `portalEmail`/`portalUserId`/`portalAccessStatus`/`_slug`; métodos
   nuevos `listClients()`, `manageAccess(action, clientId, email)`,
   `resetPasswordForClient(email)`.
-- **`js/admin.js`**: en el panel, antes del grupo "Cliente", un
-  selector que lista todos los clientes (`RSStore.listClients()`) y
-  navega con `?client=<slug>` al cambiar. Después del logo/favicon, una
-  sección **"Acceso al portal"** con el estado actual, un campo de
-  email, y botones contextuales según el estado
-  (Dar acceso / Reenviar invitación / Restablecer contraseña / Revocar
-  acceso / Restaurar acceso / Cambiar email). Estas acciones no pasan
+- **`js/admin.js`**: arriba del todo, un selector que lista todos los
+  clientes (`RSStore.listClients()`) y navega con `?client=<slug>` al
+  cambiar. Debajo, la sección **"Acceso al portal"** (abierta por
+  defecto — es la acción más frecuente) con el estado actual, el email,
+  y solo las acciones relevantes según el estado: **un único botón
+  "Dar acceso"** cuando el cliente nunca fue invitado o se le revocó el
+  acceso (el sistema decide solo si es invitación nueva o restauración
+  — el admin no tiene que saber la diferencia); "Reenviar invitación" +
+  "Quitar acceso" cuando ya tiene acceso, con "Cambiar email" y
+  "Restablecer contraseña" escondidos detrás de un "Más opciones" (uso
+  poco frecuente). Ver sección 5 (simplificación del panel, 2026-07-13)
+  para el detalle completo de este rediseño. Estas acciones no pasan
   por `markDirty()`/`saveChanges()` — quedan confirmadas apenas la
   Edge Function (o Auth) responde `ok:true`, no dependen de "Guardar
   cambios".
@@ -96,25 +102,85 @@ Elegido y confirmado con el admin antes de implementar (ver
    de los pasos 2-3, esa es la cuenta real del admin y no correspondía
    pedirla.
 
-## 4. El gate real de lectura por cliente — todavía NO activado
+## 4. El gate real de lectura por cliente — diferido a v1.1 (decisión, 2026-07-13)
 
 `supabase/06_client_access_gate.sql` retira la lectura pública de
 `clients`/`projects` y la reemplaza por "el admin ve todo, un cliente
-logueado ve solo el suyo". Está escrito y listo, pero **no se corre
-como parte de este cambio** porque antes hacen falta dos cosas:
+logueado ve solo el suyo". Está escrito y listo, pero **se decidió
+explícitamente no activarlo en v1.0**, para priorizar cerrar el
+producto simple. Motivos (confirmados con el admin):
 
-1. El cliente real (Juan Guzmán, hoy sin cuenta) tiene que estar
-   invitado de verdad con este mecanismo nuevo y haber confirmado que
-   puede loguearse — mismo patrón de seguridad que se usó para el
-   cutover del login de admin: primero el mecanismo nuevo probado en
-   paralelo, recién después se apaga el viejo.
-2. El frontend necesita un estado nuevo, todavía no construido: "no
-   tenés acceso / iniciá sesión" para cuando `load()` no encuentra
-   ninguna fila porque el visitante no está invitado. Hoy ese caso cae
-   en el mismo fallback que "Supabase está caído" (muestra los
-   placeholders de `data.js`), que deja de ser el comportamiento
-   correcto una vez que el gate esté activo.
+1. Con un solo cliente real hoy (Juan Guzmán) y una sola URL de
+   portal, el aislamiento real no cambia nada práctico todavía.
+2. Activarlo requiere primero construir una pantalla nueva de "no
+   tenés acceso / iniciá sesión" en `index.html`/`project.html` — hoy
+   no existe; sin ella, un visitante sin sesión caería en el mismo
+   fallback que "Supabase está caído" (ve los placeholders de
+   `data.js`), que no es el comportamiento correcto una vez activo el
+   gate.
+3. El cliente real tendría que estar invitado y confirmado con este
+   mecanismo antes de poder correr el gate sin dejarlo afuera de su
+   propio portal (mismo patrón de seguridad que el cutover del login
+   de admin: mecanismo nuevo probado en paralelo, recién después se
+   apaga el viejo).
 
-Correr `06_client_access_gate.sql` antes de esos dos puntos deja a
-Juan Guzmán sin poder ver su propio portal. Queda pendiente como
-trabajo aparte, explícitamente fuera del alcance de este bloque.
+**"Acceso al Portal" (invitar/revocar/reenviar/cambiar email/restablecer
+contraseña) queda funcionando igual en v1.0** como gestión de cuentas
+— lo único que se pospone es el aislamiento de lectura en sí. Pasa a
+ser trabajo de v1.1, junto con la pantalla de "sin acceso". Ver
+[DECISIONES.md](DECISIONES.md).
+
+## 5. Panel admin: simplificación de "Acceso al Portal" y del panel completo (2026-07-13)
+
+Con la infraestructura ya funcionando, se revisó el panel completo
+como diseño (no como arquitectura) con un objetivo concreto: que dar
+acceso a un cliente sea "entrar, elegir el cliente, poner el email,
+tocar un botón" — y que el panel siga siendo manejable con muchos
+clientes, no solo con uno.
+
+**"Acceso al Portal" — de hasta 4 botones visibles a 1-2:**
+- Antes: según el estado, podían aparecer "Dar acceso", "Restaurar
+  acceso", "Reenviar invitación", "Restablecer contraseña", "Revocar
+  acceso" y "Cambiar email" — hasta 4 al mismo tiempo.
+- Ahora: **"Dar acceso" es un solo botón** que cubre tanto la
+  invitación nueva como la restauración tras revocar — el sistema
+  decide internamente cuál de las dos acciones corresponde
+  (`invite` si nunca tuvo cuenta, `grant` si la tiene pero está
+  revocada) según si `data.client.portalUserId` ya existe; el admin
+  ve siempre el mismo botón con el mismo significado ("dale acceso").
+  Cuando ya tiene acceso, se ven "Reenviar invitación" y "Quitar
+  acceso"; "Cambiar email" y "Restablecer contraseña" quedan detrás de
+  un enlace "Más opciones" (uso poco frecuente, no necesitan estar
+  siempre a la vista).
+
+**Panel completo — de una lista larga sin jerarquía a secciones colapsables:**
+Se agregó `collapsibleGroup()` (usa `<details>`/`<summary>` nativos,
+sin JS de toggle) y se reorganizó `buildPanel()`:
+- Selector de cliente: siempre visible, arriba.
+- **Acceso al portal**: abierto por defecto (es la acción más
+  frecuente al entrar al panel).
+- Cliente, Apariencia (Theme Builder), Aviso superior: **colapsados
+  por defecto** — se editan una vez y no se vuelven a tocar seguido.
+- Un grupo colapsable por proyecto (el primero abierto, el resto
+  cerrado) — antes era una lista plana, ahora cada proyecto ocupa una
+  línea hasta que lo abrís.
+
+**Limpieza del footer:**
+- Se quitó **"Exportar JSON"** (y la función `exportJSON()`): era el
+  mecanismo para propagar cambios a otros dispositivos en la era
+  pre-Supabase; hoy no cumple ningún rol, cualquier guardado ya
+  persiste en Supabase automáticamente.
+- **"Aplicar cambios"** se renombró a **"Previsualizar cambios"** y
+  bajó de jerarquía visual (de `btn--primary` a `btn--ghost`): no es
+  lo mismo que "Guardar cambios" (la barra inferior que persiste en
+  Supabase), pero el nombre casi idéntico generaba confusión real.
+  Sigue cumpliendo su rol genuino: refrescar el render con ediciones
+  de texto que están en memoria pero no se ven todavía en la página
+  (el Theme Builder ya se previsualiza solo, sin este botón, llamando
+  `RS.applyTheme()` en cada cambio).
+
+Verificado con Playwright contra el proyecto real (localhost, datos
+reales de Supabase): sin errores de consola, estructura de acordeón
+correcta, "Acceso al portal" mostrando "Reenviar invitación"/"Quitar
+acceso" (estado real: `invitado`) con "Más opciones" revelando
+"Restablecer contraseña"/"Cambiar email" correctamente.

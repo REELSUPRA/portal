@@ -6,6 +6,47 @@ por cada cambio (eso va en [CHANGELOG.md](CHANGELOG.md)).
 
 ---
 
+## 2026-07-13 — Cerrar v1.0 simple: gate real diferido a v1.1, panel simplificado
+
+**Contexto:** con la infraestructura de "Acceso al Portal" ya
+desplegada, se pidió una revisión general antes de seguir agregando
+cosas, con la prioridad explícita de cerrar el Portal Cliente v1.0 de
+la forma más simple posible y dejar el sitio de ReelSupra para un chat
+aparte (ver [[scope-v1-portal-vs-reelsupra-site]] en la memoria del
+proyecto).
+
+**Decisión 1 — el gate real de lectura por cliente
+(`06_client_access_gate.sql`, ver [PLAN_ACCESO_PORTAL.md](PLAN_ACCESO_PORTAL.md))
+se pospone a v1.1**, no se activa en v1.0. Con un solo cliente real
+hoy y una sola URL de portal, el aislamiento real no cambia nada
+práctico todavía, y activarlo exige construir antes una pantalla de
+"sin acceso" que no existe. "Acceso al Portal" como gestión de cuentas
+(invitar/revocar/reenviar/cambiar email/restablecer contraseña) sigue
+funcionando igual en v1.0 — se pospone únicamente el aislamiento de
+lectura en sí.
+
+**Decisión 2 — simplificar la superficie visible de "Acceso al
+Portal"** de hasta 4 botones simultáneos a 1-2: se fusionaron
+"Dar acceso" y "Restaurar acceso" en un solo botón (el sistema elige
+la acción interna según si el cliente ya tiene una cuenta creada), y
+"Cambiar email"/"Restablecer contraseña" pasaron a un menú secundario
+"Más opciones". No se tocó el backend (Edge Function, columnas, RLS)
+— la arquitectura ya era la mínima necesaria dado que el
+`service_role key` no puede vivir en el navegador; lo que sobraba era
+cuántas de esas acciones se mostraban a la vez.
+
+**Decisión 3 — reorganizar el panel admin completo en secciones
+colapsables** (`<details>`/`<summary>` nativo vía `collapsibleGroup()`):
+"Acceso al portal" abierto por defecto, el resto (Cliente, Apariencia,
+Aviso superior, cada proyecto salvo el primero) colapsado — pensado
+para que abrir el panel con muchos clientes no muestre todo de una.
+De paso, limpieza: se sacó "Exportar JSON" (vestigio de la era
+pre-Supabase, sin rol hoy) y se renombró/bajó de jerarquía "Aplicar
+cambios" → "Previsualizar cambios" (se confundía con "Guardar
+cambios", que es el que persiste en Supabase).
+
+---
+
 ## 2026-07-12 — "Acceso al Portal": Edge Function + gate real, selector de clientes ahora
 
 **Contexto:** se pidió administrar el acceso de los clientes al portal

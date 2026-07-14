@@ -3,6 +3,24 @@
 Registro cronológico de cambios, más granular que
 [VERSIONES.md](VERSIONES.md). Orden: más reciente arriba.
 
+## 2026-07-13 (Revisión general pre-cierre v1.0: gate diferido + panel simplificado)
+
+- Decisión: el gate real de lectura por cliente
+  (`06_client_access_gate.sql`) queda diferido a v1.1 — ver
+  [DECISIONES.md](DECISIONES.md) y
+  [PLAN_ACCESO_PORTAL.md](PLAN_ACCESO_PORTAL.md) sección 4.
+- "Acceso al portal" simplificado: "Dar acceso" único botón (antes
+  separado en "Dar acceso"/"Restaurar acceso"); "Cambiar email" y
+  "Restablecer contraseña" ahora detrás de "Más opciones".
+- Panel admin reorganizado en secciones colapsables
+  (`collapsibleGroup()`, `<details>`/`<summary>`): "Acceso al portal"
+  abierto por defecto, el resto colapsado.
+- Limpieza: se quitó "Exportar JSON" (y `exportJSON()`); "Aplicar
+  cambios" renombrado a "Previsualizar cambios" y bajado de jerarquía
+  visual (ya no es `btn--primary`).
+- Verificado con Playwright contra datos reales (localhost): sin
+  errores de consola, acordeón y acciones contextuales correctas.
+
 ## 2026-07-12 ("Acceso al Portal" — cutover de infraestructura)
 
 Columnas corridas, función desplegada y URL de autenticación

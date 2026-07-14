@@ -337,6 +337,26 @@
     return h;
   }
 
+  // Sección colapsable del panel admin (<details>/<summary> nativo —
+  // sin JS de toggle). Devuelve { details, bodyEl }: agregar contenido
+  // a bodyEl, y agregar details al padre. open=false por defecto
+  // porque la mayoría de las secciones se editan una vez y no se
+  // vuelven a tocar — el objetivo es que abrir el panel no muestre
+  // todo de una, con 50 clientes eso era ruido, no orden.
+  function collapsibleGroup(text, { open = false } = {}) {
+    const details = document.createElement("details");
+    details.className = "admin-group";
+    if (open) details.open = true;
+    const summary = document.createElement("summary");
+    summary.className = "admin-group__summary";
+    summary.innerHTML = `<span>${text}</span>${RS.icon("chevron-down")}`;
+    const bodyEl = document.createElement("div");
+    bodyEl.className = "admin-group__body";
+    details.appendChild(summary);
+    details.appendChild(bodyEl);
+    return { details, bodyEl };
+  }
+
   /* ---------------------------------------------------------- */
   /* Theme Builder — generado desde RS.THEME_SCHEMA              */
   /* ---------------------------------------------------------- */
@@ -683,6 +703,24 @@
     actionsRow.style.cssText = "display:flex; flex-wrap:wrap; gap:var(--space-2);";
     wrap.appendChild(actionsRow);
 
+    // Acciones secundarias (cambiar email, restablecer contraseña) —
+    // ocultas detrás de un toggle: el admin las necesita rara vez,
+    // no ameritan estar siempre a la vista junto a "Dar acceso" /
+    // "Quitar acceso".
+    const moreToggle = document.createElement("button");
+    moreToggle.type = "button";
+    moreToggle.className = "admin-link-btn";
+    moreToggle.style.display = "none";
+    wrap.appendChild(moreToggle);
+    const moreRow = document.createElement("div");
+    moreRow.style.cssText = "display:none; flex-wrap:wrap; gap:var(--space-2); margin-top:var(--space-2);";
+    wrap.appendChild(moreRow);
+    moreToggle.addEventListener("click", () => {
+      const willShow = moreRow.style.display === "none";
+      moreRow.style.display = willShow ? "flex" : "none";
+      moreToggle.textContent = willShow ? "Menos opciones ▴" : "Más opciones ▾";
+    });
+
     function renderStatus() {
       statusEl.textContent = `Estado: ${statusLabels[data.client.portalAccessStatus] || data.client.portalAccessStatus}`;
     }
@@ -713,24 +751,39 @@
         });
     }
 
+    // El admin solo necesita pensar en "acceso: sí/no" — que la primera
+    // vez sea una invitación nueva o, tras una revocación, una
+    // restauración de la cuenta existente es un detalle interno que
+    // decide esta función, no algo que el admin tenga que elegir.
     function renderActions() {
       actionsRow.innerHTML = "";
+      moreRow.innerHTML = "";
       const status = data.client.portalAccessStatus;
+      const hasAccount = !!data.client.portalUserId;
 
-      if (status === "sin_invitar") {
+      if (status !== "invitado") {
         actionsRow.appendChild(
           actionBtn(`${RS.icon("send")} Dar acceso`, () => {
             if (!pendingEmail) { showToast("Ingresá un email primero", "error"); return Promise.resolve(); }
-            return runAccessAction("invite", pendingEmail);
+            return runAccessAction(hasAccount ? "grant" : "invite", pendingEmail);
           })
         );
-      }
-
-      if (status === "invitado") {
+      } else {
         actionsRow.appendChild(
           actionBtn(`${RS.icon("send")} Reenviar invitación`, () => runAccessAction("resend"))
         );
         actionsRow.appendChild(
+          actionBtn(`${RS.icon("x")} Quitar acceso`, () => {
+            if (!window.confirm("¿Quitar el acceso de este cliente al portal?")) return Promise.resolve();
+            return runAccessAction("revoke");
+          })
+        );
+      }
+
+      moreToggle.style.display = hasAccount ? "inline-block" : "none";
+      moreToggle.textContent = "Más opciones ▾";
+      if (hasAccount) {
+        moreRow.appendChild(
           actionBtn(`${RS.icon("key")} Restablecer contraseña`, () => {
             if (!data.client.portalEmail) return Promise.resolve();
             return RSStore.resetPasswordForClient(data.client.portalEmail)
@@ -738,22 +791,7 @@
               .catch((e) => showToast(e.message || "No se pudo enviar el email", "error"));
           })
         );
-        actionsRow.appendChild(
-          actionBtn(`${RS.icon("x")} Revocar acceso`, () => {
-            if (!window.confirm("¿Revocar el acceso de este cliente al portal?")) return Promise.resolve();
-            return runAccessAction("revoke");
-          })
-        );
-      }
-
-      if (status === "revocado") {
-        actionsRow.appendChild(
-          actionBtn(`${RS.icon("send")} Restaurar acceso`, () => runAccessAction("grant"))
-        );
-      }
-
-      if (status !== "sin_invitar") {
-        actionsRow.appendChild(
+        moreRow.appendChild(
           actionBtn(`${RS.icon("edit")} Cambiar email`, () => {
             if (!pendingEmail || pendingEmail === data.client.portalEmail) {
               showToast("Escribí el nuevo email en el campo de arriba", "error");
@@ -790,8 +828,7 @@
       </div>
       <div class="admin-panel__body" id="adminBody"></div>
       <div class="admin-panel__footer">
-        <button class="btn btn--ghost" id="adminExport">${RS.icon("download")} Exportar JSON</button>
-        <button class="btn btn--primary" id="adminApply">${RS.icon("check")} Aplicar cambios</button>
+        <button class="btn btn--ghost" id="adminPreview">${RS.icon("eye")} Previsualizar cambios</button>
       </div>`;
 
     document.body.appendChild(overlayEl);
@@ -799,18 +836,26 @@
     ensureToast();
 
     panelEl.querySelector(".admin-panel__close").addEventListener("click", closePanel);
-    panelEl.querySelector("#adminExport").addEventListener("click", exportJSON);
-    panelEl.querySelector("#adminApply").addEventListener("click", () => {
+    // Distinto de "Guardar cambios" (barra inferior, persiste en
+    // Supabase): esto solo refresca el render con lo que ya está en
+    // memoria, para ver textos editados sin esperar a guardar. El
+    // Theme Builder ya previsualiza solo (RS.applyTheme() en cada
+    // cambio) — este botón cubre el resto (nombre, mensajes, etc.).
+    panelEl.querySelector("#adminPreview").addEventListener("click", () => {
       refreshPage();
-      showToast("Cambios aplicados en esta sesión");
+      showToast("Vista previa actualizada");
     });
 
     const body = panelEl.querySelector("#adminBody");
     buildClientSelector(body);
-    body.appendChild(groupTitle("Cliente"));
-    body.appendChild(field("Nombre del cliente", data.client.name, (v) => (data.client.name = v)));
-    body.appendChild(field("Mensaje de bienvenida", data.client.welcomeMessage, (v) => (data.client.welcomeMessage = v), true));
 
+    const accesoGroup = collapsibleGroup("Acceso al portal", { open: true });
+    accesoGroup.bodyEl.appendChild(buildPortalAccessSection(data));
+    body.appendChild(accesoGroup.details);
+
+    const clienteGroup = collapsibleGroup("Cliente");
+    clienteGroup.bodyEl.appendChild(field("Nombre del cliente", data.client.name, (v) => (data.client.name = v)));
+    clienteGroup.bodyEl.appendChild(field("Mensaje de bienvenida", data.client.welcomeMessage, (v) => (data.client.welcomeMessage = v), true));
     const brandRow = document.createElement("div");
     brandRow.style.cssText = "display:flex; gap:var(--space-2); margin-bottom:var(--space-4);";
     const logoBtn = document.createElement("button");
@@ -827,23 +872,25 @@
     faviconBtn.addEventListener("click", openFaviconModal);
     brandRow.appendChild(logoBtn);
     brandRow.appendChild(faviconBtn);
-    body.appendChild(brandRow);
+    clienteGroup.bodyEl.appendChild(brandRow);
+    body.appendChild(clienteGroup.details);
 
-    body.appendChild(groupTitle("Acceso al portal"));
-    body.appendChild(buildPortalAccessSection(data));
+    const aparienciaGroup = collapsibleGroup("Apariencia");
+    buildThemeBuilder(aparienciaGroup.bodyEl, data);
+    body.appendChild(aparienciaGroup.details);
 
-    buildThemeBuilder(body, data);
-
-    body.appendChild(groupTitle("Aviso superior"));
-    body.appendChild(checkboxField("Mostrar aviso al cliente", data.announcement.active, (v) => (data.announcement.active = v)));
-    body.appendChild(field("Texto del aviso", data.announcement.text, (v) => (data.announcement.text = v), true));
+    const avisoGroup = collapsibleGroup("Aviso superior");
+    avisoGroup.bodyEl.appendChild(checkboxField("Mostrar aviso al cliente", data.announcement.active, (v) => (data.announcement.active = v)));
+    avisoGroup.bodyEl.appendChild(field("Texto del aviso", data.announcement.text, (v) => (data.announcement.text = v), true));
+    body.appendChild(avisoGroup.details);
 
     data.projects.forEach((p, i) => {
-      body.appendChild(groupTitle(`Proyecto ${i + 1} — ${p.name}`));
-      body.appendChild(field("Nombre del proyecto", p.name, (v) => (p.name = v)));
-      body.appendChild(field("Estado (texto visible)", p.status, (v) => (p.status = v)));
-      body.appendChild(field("Objetivo", p.objective, (v) => (p.objective = v), true));
-      body.appendChild(buildContentListButtons(p));
+      const projectGroup = collapsibleGroup(`Proyecto ${i + 1} — ${p.name}`, { open: i === 0 });
+      projectGroup.bodyEl.appendChild(field("Nombre del proyecto", p.name, (v) => (p.name = v)));
+      projectGroup.bodyEl.appendChild(field("Estado (texto visible)", p.status, (v) => (p.status = v)));
+      projectGroup.bodyEl.appendChild(field("Objetivo", p.objective, (v) => (p.objective = v), true));
+      projectGroup.bodyEl.appendChild(buildContentListButtons(p));
+      body.appendChild(projectGroup.details);
     });
 
     const hint = document.createElement("p");
@@ -854,17 +901,6 @@
     isBuilt = true;
   }
 
-  function exportJSON() {
-    const json = JSON.stringify(window.CLIENT_DATA, null, 2);
-    const blob = new Blob([json], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "client-data-export.json";
-    a.click();
-    URL.revokeObjectURL(url);
-    showToast("JSON exportado — reemplazá el objeto en js/data.js");
-  }
 
   function openPanel() {
     if (!isBuilt) buildPanel();

@@ -159,12 +159,17 @@ del orden de bloques) no incluida en este pase.
   en `clients`; `RSStore.listClients/manageAccess/resetPasswordForClient`.
   Detalle y por qué esta arquitectura en
   [PLAN_ACCESO_PORTAL.md](PLAN_ACCESO_PORTAL.md).
-- **No cerrado todavía:** faltan 2 pasos manuales del admin (correr el
-  SQL aditivo, desplegar la Edge Function) y la prueba end-to-end con
-  un email propio. El gate real de lectura por cliente
-  (`06_client_access_gate.sql`) queda preparado pero **sin activar** —
-  necesita invitar antes al cliente real (Juan Guzmán) y construir un
-  estado "sin acceso" en el frontend.
+- **Actualizado (2026-07-13):** columnas corridas, Edge Function
+  desplegada, Site URL de Auth corregido. Panel simplificado: "Dar
+  acceso" es un solo botón (antes separado en dar/restaurar), acciones
+  poco frecuentes detrás de "Más opciones", y el panel completo pasó a
+  secciones colapsables. Decisión explícita: **el gate real de lectura
+  por cliente (`06_client_access_gate.sql`) se difiere a v1.1** — v1.0
+  cierra con "Acceso al Portal" como gestión de cuentas, sin activar el
+  aislamiento de lectura. Ver [PLAN_ACCESO_PORTAL.md](PLAN_ACCESO_PORTAL.md).
+- **No cerrado todavía:** un email de invitación de prueba llegó
+  rechazado (`otp_expired`) — en diagnóstico, no confirmado si requiere
+  configurar SMTP propio (Resend) antes de dar por probado el flujo.
 
 ## Deployment — 2026-07-11
 
