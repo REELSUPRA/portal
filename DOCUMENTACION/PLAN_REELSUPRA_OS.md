@@ -257,3 +257,29 @@ riesgo de pérdida de datos.
 - **Bugs encontrados y corregidos en este bloque:** el mensaje de
   error genérico de Postgres al crear un cliente/proyecto con slug
   duplicado (único hallazgo real de esta ronda de pruebas).
+
+## 10. Storage — corrido y verificado (2026-07-14)
+
+El admin corrió `03_storage.sql` (versión idempotente). Verificado
+contra el proyecto real, con una prueba más confiable que la anterior
+(comparando el error real de un bucket inexistente contra los 4
+reales, en vez de un endpoint de metadata que resultó no ser fiable
+para anon):
+
+- Los 4 buckets (`logos`, `covers`, `documents`, `media`) **existen**
+  — confirmado porque una subida de prueba a cada uno da rechazo por
+  RLS (`"new row violates row-level security policy"`), mientras que
+  la misma subida a un bucket inventado da `"Bucket not found"` —
+  son errores distintos y confirman la existencia real.
+- La policy de **lectura pública** funciona: pedir un objeto sin
+  ninguna `apikey` da `"Object not found"` (no un error de
+  autorización), es decir, la lectura no requiere login.
+- La policy de **escritura solo-admin** funciona: una subida sin
+  sesión (anon) es rechazada.
+- **No verificado por mí directamente:** una subida real como admin
+  autenticado (necesitaría su contraseña, que no corresponde pedir).
+  Confianza alta igual: `is_admin()` es la misma función que ya usan
+  las políticas de `clients`/`projects`, y esas ya se probaron
+  funcionando con la cuenta admin real en el cierre de la migración a
+  Supabase. El código de `js/admin.js` ya no debería necesitar el
+  fallback a base64 al subir una imagen nueva.

@@ -177,17 +177,18 @@ del orden de bloques) no incluida en este pase.
   Detalle en [PLAN_REELSUPRA_OS.md](PLAN_REELSUPRA_OS.md).
 - **Continuado de forma autónoma (2026-07-14):** imágenes migradas a
   Supabase Storage en código (`RSStore.uploadImage()`, con fallback a
-  base64) — bloqueado en producción porque se verificó que los buckets
-  de `03_storage.sql` nunca se crearon (hallazgo real, no supuesto).
-  Verificación end-to-end completa (`index`/`project`/`dashboard` en 5
-  viewports) sin errores. Único bug encontrado y corregido: mensaje de
-  error crudo de Postgres al crear un cliente/proyecto con slug
-  duplicado.
-- **No cerrado todavía (requiere al admin, ver lista de intervenciones
-  en el último mensaje de la conversación):** correr `03_storage.sql`,
-  y resolver el email de invitación (`otp_expired`) configurando SMTP
-  propio (Resend) — sin esos dos pasos, "Crear acceso" y la subida de
-  imágenes no quedan 100% cerrados de punta a punta.
+  base64). Verificación end-to-end completa (`index`/`project`/`dashboard`
+  en 5 viewports) sin errores. Único bug encontrado y corregido:
+  mensaje de error crudo de Postgres al crear un cliente/proyecto con
+  slug duplicado.
+- **Storage cerrado (2026-07-14):** `03_storage.sql` (versión
+  idempotente) corrido por el admin y verificado contra el proyecto
+  real — los 4 buckets existen, lectura pública sin login funciona,
+  escritura rechaza correctamente a no-admins. El upload de imágenes ya
+  no debería caer al fallback de base64.
+- **No cerrado todavía:** el email de invitación (`otp_expired`) —
+  requiere configurar SMTP propio (Resend), credencial que solo el
+  admin puede dar.
 
 ## Deployment — 2026-07-11
 

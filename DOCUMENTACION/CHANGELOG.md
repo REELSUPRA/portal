@@ -3,6 +3,18 @@
 Registro cronológico de cambios, más granular que
 [VERSIONES.md](VERSIONES.md). Orden: más reciente arriba.
 
+## 2026-07-14 (Storage: buckets corridos y verificados)
+
+- `03_storage.sql` (versión idempotente) corrido por el admin. Un
+  primer intento había fallado a mitad de camino e hizo rollback de
+  los buckets — con `drop policy if exists` agregado, la segunda
+  corrida funcionó.
+- Verificado contra el proyecto real: los 4 buckets existen, la
+  lectura pública funciona sin apikey, y la escritura rechaza
+  correctamente a usuarios no-admin. Detalle del método de
+  verificación en [PLAN_REELSUPRA_OS.md](PLAN_REELSUPRA_OS.md) sección
+  10. El upload de imágenes ya no debería caer al fallback de base64.
+
 ## 2026-07-14 (Cierre autónomo hacia v1.0: Storage + verificación e2e)
 
 - Imágenes: implementado el upload a Supabase Storage
