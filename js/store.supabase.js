@@ -289,18 +289,76 @@ window.RSStore = (() => {
     }
   }
 
-  // ---- "Acceso al Portal" ----
+  // ---- "Acceso al Portal" + Dashboard ReelSupra ----
 
-  // Lista mínima para el selector de clientes del panel — no trae
-  // listas/jsonb pesados, solo lo necesario para elegir cuál administrar.
+  // Lista para el selector de clientes y el Dashboard — trae también
+  // el estado de acceso (para mostrarlo sin un round-trip extra por
+  // cliente), pero no listas/jsonb pesados.
   function listClients() {
     return client()
       .from("clients")
-      .select("id, slug, name")
+      .select("id, slug, name, portal_email, portal_user_id, portal_access_status")
       .order("name", { ascending: true })
       .then(({ data, error }) => {
         if (error) throw error;
         return data || [];
+      });
+  }
+
+  // Lista liviana de TODOS los proyectos, para el Dashboard — a
+  // propósito sin los campos jsonb pesados (goals/roadmap/etc): con
+  // cientos de clientes, traer todo el contenido de todos los
+  // proyectos solo para listarlos sería desperdiciar ancho de banda.
+  function listProjectsLight() {
+    return client()
+      .from("projects")
+      .select("id, slug, name, client_id, status")
+      .order("name", { ascending: true })
+      .then(({ data, error }) => {
+        if (error) throw error;
+        return data || [];
+      });
+  }
+
+  // Crear un cliente nuevo desde el Dashboard — defaults vacíos,
+  // mismo shape que espera rowToClient()/render.js.
+  function createClient({ name, slug }) {
+    return client()
+      .from("clients")
+      .insert({
+        slug,
+        name,
+        theme: {},
+        welcome_message: "",
+        hero_slides: [],
+        announcement: { active: false, text: "" },
+      })
+      .select()
+      .single()
+      .then(({ data, error }) => {
+        if (error) throw error;
+        return rowToClient(data);
+      });
+  }
+
+  // Crear un proyecto nuevo ya asociado a un cliente — defaults
+  // vacíos, mismo shape que espera rowToProject()/render.js.
+  function createProject(clientId, { name, slug }) {
+    return client()
+      .from("projects")
+      .insert({
+        client_id: clientId,
+        slug,
+        name,
+        goals: [], roadmap: [], content_pieces: [], next_steps: [],
+        pending_material: [], resources: [], documents: [], links: [],
+        calendar: [], bitacora: [], upsells: [], hero_slides: [], blocks: [],
+      })
+      .select()
+      .single()
+      .then(({ data, error }) => {
+        if (error) throw error;
+        return rowToProject(data);
       });
   }
 
@@ -318,21 +376,9 @@ window.RSStore = (() => {
       });
   }
 
-  // "Restablecer acceso" — a diferencia de las de arriba, NO necesita
-  // la Edge Function ni la service_role key: es un método público de
-  // Supabase Auth, funciona con la publishable key directo.
-  function resetPasswordForClient(email) {
-    return client()
-      .auth.resetPasswordForEmail(email)
-      .then(({ error }) => {
-        if (error) throw error;
-        return true;
-      });
-  }
-
   return {
     load, save, clear, hydrate,
     signIn, signOut, getSession,
-    listClients, manageAccess, resetPasswordForClient,
+    listClients, listProjectsLight, createClient, createProject, manageAccess,
   };
 })();

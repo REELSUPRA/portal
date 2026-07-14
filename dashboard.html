@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard ReelSupra</title>
+  <meta name="robots" content="noindex, nofollow" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet" />
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
+
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="topbar__inner">
+      <div class="brand">ReelSupra <span class="brand__client">Dashboard</span></div>
+      <div class="topbar__actions">
+        <button class="btn btn--ghost" id="newClientBtn">Nuevo cliente</button>
+        <button class="btn btn--ghost" id="logoutBtn">Salir</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="shell dashboard-shell">
+    <div id="loginGate" class="dashboard-gate">
+      <p>Iniciá sesión para administrar el portal.</p>
+      <button class="btn btn--primary" id="loginGateBtn">Iniciar sesión</button>
+    </div>
+
+    <div id="app" class="dashboard-app" style="display:none;">
+      <div id="clientList" class="dashboard-client-list"></div>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="js/store.supabase.js"></script>
+  <script src="js/render.js"></script>
+  <script src="js/admin.js"></script>
+  <script src="js/dashboard.js"></script>
+</body>
+</html>

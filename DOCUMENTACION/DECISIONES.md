@@ -6,6 +6,42 @@ por cada cambio (eso va en [CHANGELOG.md](CHANGELOG.md)).
 
 ---
 
+## 2026-07-14 — Evolución a "ReelSupra OS": Dashboard admin separado, sin reescribir el editor
+
+**Contexto:** con "Acceso al Portal" ya funcionando pero un email de
+invitación fallando (`otp_expired`, atribuido al correo compartido de
+Supabase — ver [PLAN_ACCESO_PORTAL.md](PLAN_ACCESO_PORTAL.md)), se
+pidió explícitamente no seguir parcheando ese síntoma puntual y en
+cambio planificar la evolución del panel admin hacia algo pensado para
+administrar muchos clientes, con un documento de arquitectura previo
+a programar (pedido explícito: "no tocar código hasta aprobar el
+plan").
+
+**Decisión — el Dashboard es una superficie de entrada nueva, no un
+editor nuevo.** Se evaluó (implícitamente, al diseñar el plan) rehacer
+el editor de contenido como parte de esto, y se descartó: todo el
+motor declarativo (Theme Builder, editor de listas, bloques) ya
+funciona y cumple su función — reescribirlo hubiera violado el pedido
+explícito de "no reabrir cosas que ya están terminadas". En cambio,
+`dashboard.html` es una lista/launcher: entrar a un cliente sigue
+siendo exactamente `index.html?client=<slug>&admin=true` de siempre.
+
+**Decisión — "Acceso al Portal" se simplifica a 2 estados puramente
+visuales**, sin ningún texto técnico (`sin_invitar`/`invitado`/
+`revocado` deja de mostrarse) y sin "Restablecer contraseña" como
+acción separada (se fusiona en "Reenviar acceso", mismo resultado
+práctico para el cliente). Confirmado con 3 preguntas puntuales antes
+de programar (ver sección 7 de
+[PLAN_REELSUPRA_OS.md](PLAN_REELSUPRA_OS.md)): `dashboard.html` alcanza
+sin alias de ruta, mover proyectos entre clientes queda fuera de
+alcance, y sigue habiendo un solo admin sin roles múltiples.
+
+**Sin tablas nuevas ni cambios de RLS** — se verificó contra
+`supabase/02_policies.sql` que las políticas de `insert` para admin en
+`clients`/`projects` ya existían desde la migración original.
+
+---
+
 ## 2026-07-13 — Cerrar v1.0 simple: gate real diferido a v1.1, panel simplificado
 
 **Contexto:** con la infraestructura de "Acceso al Portal" ya

@@ -1108,6 +1108,15 @@ button {
   outline: none;
 }
 
+/* Email de "Acceso al portal" mientras el cliente ya tiene acceso:
+   bloqueado hasta tocar "Editar email" — la señal visual reemplaza al
+   texto de estado técnico que había antes. */
+.admin-field__input--locked {
+  background: var(--rs-gray-100);
+  color: var(--rs-gray-300);
+  cursor: not-allowed;
+}
+
 .admin-panel__footer {
   padding: var(--space-6);
   border-top: 1px solid var(--rs-gray-100);
@@ -1134,14 +1143,15 @@ button {
 }
 
 /* Secciones colapsables del panel admin — <details>/<summary> nativos:
-   sin JS de toggle, accesibles por teclado, comportamiento estándar. */
+   sin JS de toggle, accesibles por teclado, comportamiento estándar.
+   Fondo propio por sección (en vez de solo un borde separador): con
+   todo blanco sobre blanco costaba distinguir dónde empieza y termina
+   cada grupo — el tinte gris resuelve eso sin agregar más chrome. */
 .admin-group {
-  border-bottom: 1px solid var(--rs-gray-100);
+  background: var(--rs-gray-50);
+  border-radius: var(--radius-md);
   margin-bottom: var(--space-3);
-}
-
-.admin-group:last-of-type {
-  border-bottom: none;
+  padding: 0 var(--space-4);
 }
 
 .admin-group__summary {
@@ -1151,11 +1161,11 @@ button {
   gap: var(--space-2);
   cursor: pointer;
   list-style: none;
-  font-size: 11.5px;
+  font-size: 12.5px;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
-  color: var(--rs-gray-300);
+  color: var(--rs-gray-500);
   padding: var(--space-3) 0;
 }
 
@@ -1169,6 +1179,7 @@ button {
   width: 15px;
   height: 15px;
   flex-shrink: 0;
+  color: var(--rs-gray-300);
   transition: transform var(--duration) var(--ease);
 }
 
@@ -1195,6 +1206,85 @@ button {
 }
 
 .admin-link-btn:hover {
+  color: var(--rs-black);
+}
+
+/* ---------------------------------------------------------- */
+/* Dashboard ReelSupra (dashboard.html) — punto de entrada del  */
+/* admin: lista clientes/proyectos, reutiliza .btn/.admin-field/ */
+/* .admin-group/.admin-link-btn del panel, sin lenguaje visual  */
+/* aparte.                                                       */
+/* ---------------------------------------------------------- */
+
+.dashboard-shell {
+  padding-top: var(--space-8);
+  padding-bottom: var(--space-10);
+}
+
+.dashboard-gate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-10) 0;
+  text-align: center;
+  color: var(--rs-gray-500);
+}
+
+.dashboard-client-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.dashboard-loading {
+  color: var(--rs-gray-300);
+  font-size: 14px;
+  padding: var(--space-6) 0;
+}
+
+.dashboard-card {
+  background: #fff;
+  border: 1px solid var(--rs-gray-100);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5) var(--space-6);
+}
+
+.dashboard-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.dashboard-card__title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--rs-black);
+}
+
+.dashboard-card__projects {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--rs-gray-100);
+}
+
+.dashboard-project-row {
+  padding: var(--space-2) var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--rs-gray-500);
+  text-decoration: none;
+  transition: background var(--duration) var(--ease);
+}
+
+.dashboard-project-row:hover {
+  background: var(--rs-gray-50);
   color: var(--rs-black);
 }
 

@@ -167,6 +167,14 @@ del orden de bloques) no incluida en este pase.
   por cliente (`06_client_access_gate.sql`) se difiere a v1.1** — v1.0
   cierra con "Acceso al Portal" como gestión de cuentas, sin activar el
   aislamiento de lectura. Ver [PLAN_ACCESO_PORTAL.md](PLAN_ACCESO_PORTAL.md).
+- **Evolucionado (2026-07-14) a "ReelSupra OS":** nuevo `dashboard.html`
+  (punto de entrada del admin — lista clientes/proyectos, crea
+  clientes/proyectos nuevos, gestiona accesos inline; el editor de
+  contenido por-cliente no cambió). "Acceso al Portal" simplificado
+  aún más: 2 estados puramente visuales (sin acceso → "Crear acceso";
+  con acceso → email bloqueado + Editar email/Reenviar acceso/Revocar
+  acceso), sin texto técnico ni "Restablecer contraseña" por separado.
+  Detalle en [PLAN_REELSUPRA_OS.md](PLAN_REELSUPRA_OS.md).
 - **No cerrado todavía:** un email de invitación de prueba llegó
   rechazado (`otp_expired`) — en diagnóstico, no confirmado si requiere
   configurar SMTP propio (Resend) antes de dar por probado el flujo.

@@ -1,11 +1,14 @@
 # Plan — "Acceso al Portal" (gestión de clientes sin el dashboard de Supabase)
 
-Estado: **infraestructura desplegada y panel simplificado
-(2026-07-13). Pendiente: resolver un email de invitación que llegó
-rechazado (`otp_expired`, en diagnóstico — ver sección 3) y, recién
-después, la prueba end-to-end con un email propio.** El gate real de
-lectura por cliente (`06_client_access_gate.sql`) queda **diferido a
-v1.1**, decisión explícita — ver sección 4.
+Estado: **infraestructura desplegada; UI simplificada aún más el
+2026-07-14 (ver [PLAN_REELSUPRA_OS.md](PLAN_REELSUPRA_OS.md) sección
+3 — es la versión vigente de "Acceso al Portal", reemplaza la
+descripción de botones de la sección 2 de este documento). Pendiente:
+resolver un email de invitación que llegó rechazado (`otp_expired`,
+en diagnóstico — ver sección 3) y, recién después, la prueba
+end-to-end con un email propio.** El gate real de lectura por cliente
+(`06_client_access_gate.sql`) queda **diferido a v1.1**, decisión
+explícita — ver sección 4.
 
 ## 1. Por qué esta arquitectura
 

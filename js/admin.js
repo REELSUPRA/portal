@@ -658,35 +658,23 @@
       });
   }
 
-  // "Acceso al Portal" — todas las acciones pasan por RSStore
-  // (manageAccess/resetPasswordForClient), que a su vez llaman a la
-  // Edge Function manage-client-access o a Supabase Auth directo. Este
-  // bloque solo arma la UI y refleja el estado que devuelve cada
-  // acción — no toca CLIENT_DATA ni pasa por markDirty/saveChanges,
-  // porque no es un cambio "sin guardar": ya queda guardado en el
-  // momento en que la acción responde ok:true.
-  function buildPortalAccessSection(data) {
+  // "Acceso al Portal" — todas las acciones pasan por RSStore.manageAccess(),
+  // que llama a la Edge Function (única pieza con la service_role key).
+  // Sin estados técnicos visibles: el admin solo ve "sin acceso" (campo
+  // vacío/editable + "Crear acceso") o "con acceso" (campo bloqueado +
+  // Editar email / Reenviar acceso / Revocar acceso) — la diferencia
+  // entre "nunca invitado" y "revocado" (ambas caen en "sin acceso") la
+  // resuelve esta función sola, no es algo que el admin tenga que
+  // pensar. Reutilizada tal cual desde el Dashboard (window.RSAdmin).
+  // No toca CLIENT_DATA ni pasa por markDirty/saveChanges — no es un
+  // cambio "sin guardar", ya queda confirmado apenas la acción responde.
+  function buildPortalAccessSection(data, onChange) {
     const wrap = document.createElement("div");
     wrap.style.marginBottom = "var(--space-4)";
 
-    const statusLabels = {
-      sin_invitar: "Sin invitar",
-      invitado: "Invitado / con acceso",
-      revocado: "Acceso revocado",
-    };
-
-    const statusEl = document.createElement("div");
-    statusEl.className = "admin-portal-access__status";
-    statusEl.style.cssText = "font-size:13px; color:var(--text-muted); margin-bottom:var(--space-2);";
-    wrap.appendChild(statusEl);
-
-    // Campo propio (no el field() compartido): ese helper llama
-    // markDirty() en cada tecla, y este email no viaja por
-    // saveChanges()/RSStore.save() — se confirma recién al presionar
-    // una de las acciones de abajo, vía la Edge Function. Usar
-    // markDirty() acá abriría la barra "cambios sin guardar" por un
-    // dato que en realidad no persiste ese camino.
     let pendingEmail = data.client.portalEmail || "";
+    let editingEmail = false;
+
     const emailWrap = document.createElement("div");
     emailWrap.className = "admin-field";
     const emailLabel = document.createElement("label");
@@ -703,33 +691,11 @@
     actionsRow.style.cssText = "display:flex; flex-wrap:wrap; gap:var(--space-2);";
     wrap.appendChild(actionsRow);
 
-    // Acciones secundarias (cambiar email, restablecer contraseña) —
-    // ocultas detrás de un toggle: el admin las necesita rara vez,
-    // no ameritan estar siempre a la vista junto a "Dar acceso" /
-    // "Quitar acceso".
-    const moreToggle = document.createElement("button");
-    moreToggle.type = "button";
-    moreToggle.className = "admin-link-btn";
-    moreToggle.style.display = "none";
-    wrap.appendChild(moreToggle);
-    const moreRow = document.createElement("div");
-    moreRow.style.cssText = "display:none; flex-wrap:wrap; gap:var(--space-2); margin-top:var(--space-2);";
-    wrap.appendChild(moreRow);
-    moreToggle.addEventListener("click", () => {
-      const willShow = moreRow.style.display === "none";
-      moreRow.style.display = willShow ? "flex" : "none";
-      moreToggle.textContent = willShow ? "Menos opciones ▴" : "Más opciones ▾";
-    });
-
-    function renderStatus() {
-      statusEl.textContent = `Estado: ${statusLabels[data.client.portalAccessStatus] || data.client.portalAccessStatus}`;
-    }
-
-    function actionBtn(label, onClick) {
+    function actionBtn(label, onClick, variant = "ghost") {
       const btn = document.createElement("button");
       btn.type = "button";
-      btn.className = "btn btn--ghost";
-      btn.textContent = label;
+      btn.className = `btn btn--${variant}`;
+      btn.innerHTML = label;
       btn.addEventListener("click", () => {
         btn.disabled = true;
         onClick(btn).finally(() => { btn.disabled = false; });
@@ -742,69 +708,74 @@
         .then((res) => {
           data.client.portalEmail = res.portalEmail;
           data.client.portalAccessStatus = res.portalAccessStatus;
-          renderStatus();
-          renderActions();
+          pendingEmail = res.portalEmail || "";
+          editingEmail = false;
+          render();
           showToast("Listo — Acceso al Portal actualizado");
+          if (onChange) onChange();
         })
         .catch((e) => {
           showToast(e.message || "No se pudo completar la acción", "error");
         });
     }
 
-    // El admin solo necesita pensar en "acceso: sí/no" — que la primera
-    // vez sea una invitación nueva o, tras una revocación, una
-    // restauración de la cuenta existente es un detalle interno que
-    // decide esta función, no algo que el admin tenga que elegir.
-    function renderActions() {
+    function render() {
       actionsRow.innerHTML = "";
-      moreRow.innerHTML = "";
       const status = data.client.portalAccessStatus;
+      const hasAccess = status === "invitado";
       const hasAccount = !!data.client.portalUserId;
 
-      if (status !== "invitado") {
+      // Bloqueado (solo lectura) mientras hay acceso y no se tocó
+      // "Editar email" — evita cambios accidentales del email de un
+      // cliente que ya está usando el portal.
+      emailInput.readOnly = hasAccess && !editingEmail;
+      emailInput.classList.toggle("admin-field__input--locked", emailInput.readOnly);
+
+      if (!hasAccess) {
         actionsRow.appendChild(
-          actionBtn(`${RS.icon("send")} Dar acceso`, () => {
+          actionBtn(`${RS.icon("send")} Crear acceso`, () => {
             if (!pendingEmail) { showToast("Ingresá un email primero", "error"); return Promise.resolve(); }
             return runAccessAction(hasAccount ? "grant" : "invite", pendingEmail);
-          })
+          }, "primary")
         );
-      } else {
-        actionsRow.appendChild(
-          actionBtn(`${RS.icon("send")} Reenviar invitación`, () => runAccessAction("resend"))
-        );
-        actionsRow.appendChild(
-          actionBtn(`${RS.icon("x")} Quitar acceso`, () => {
-            if (!window.confirm("¿Quitar el acceso de este cliente al portal?")) return Promise.resolve();
-            return runAccessAction("revoke");
-          })
-        );
+        return;
       }
 
-      moreToggle.style.display = hasAccount ? "inline-block" : "none";
-      moreToggle.textContent = "Más opciones ▾";
-      if (hasAccount) {
-        moreRow.appendChild(
-          actionBtn(`${RS.icon("key")} Restablecer contraseña`, () => {
-            if (!data.client.portalEmail) return Promise.resolve();
-            return RSStore.resetPasswordForClient(data.client.portalEmail)
-              .then(() => showToast("Email de restablecimiento enviado"))
-              .catch((e) => showToast(e.message || "No se pudo enviar el email", "error"));
-          })
-        );
-        moreRow.appendChild(
-          actionBtn(`${RS.icon("edit")} Cambiar email`, () => {
+      if (editingEmail) {
+        actionsRow.appendChild(
+          actionBtn(`${RS.icon("check")} Guardar email`, () => {
             if (!pendingEmail || pendingEmail === data.client.portalEmail) {
-              showToast("Escribí el nuevo email en el campo de arriba", "error");
+              editingEmail = false;
+              render();
               return Promise.resolve();
             }
             return runAccessAction("change_email", pendingEmail);
+          }, "primary")
+        );
+        // Sin botón "cancelar" aparte: cerrar y reabrir el panel
+        // descarta el cambio a medio hacer sin necesitar uno.
+      } else {
+        actionsRow.appendChild(
+          actionBtn(`${RS.icon("edit")} Editar email`, () => {
+            editingEmail = true;
+            render();
+            emailInput.focus();
+            return Promise.resolve();
           })
         );
       }
+      actionsRow.appendChild(
+        actionBtn(`${RS.icon("send")} Reenviar acceso`, () => runAccessAction("resend"))
+      );
+      actionsRow.appendChild(
+        actionBtn(`${RS.icon("x")} Revocar acceso`, () => {
+          if (!window.confirm("¿Revocar el acceso de este cliente al portal?")) return Promise.resolve();
+          return runAccessAction("revoke");
+        })
+      );
     }
 
-    renderStatus();
-    renderActions();
+    render();
     return wrap;
   }
 
@@ -1271,5 +1242,9 @@
     });
   }
 
-  window.RSAdmin = { init, toggleAdminMode, detectAdminMode };
+  // buildPortalAccessSection/tryActivateAdmin/showToast se exponen
+  // además para que dashboard.js los reutilice tal cual — el Dashboard
+  // no reimplementa el login ni "Acceso al Portal", los toma prestados
+  // de acá (única fuente de verdad para ambos).
+  window.RSAdmin = { init, toggleAdminMode, detectAdminMode, buildPortalAccessSection, tryActivateAdmin, showToast };
 })();

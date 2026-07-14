@@ -14,14 +14,16 @@ No hay build step: HTML/CSS/JS planos, sin transpilación ni bundler.
 ```
 index.html          Bienvenida + selector de proyectos del cliente
 project.html         Detalle de un proyecto (?id=slug-del-proyecto)
+dashboard.html       Dashboard ReelSupra — entrada del admin (2026-07-14)
 _redirects           Redirect de Netlify: /admin -> /index.html?admin=true
 css/styles.css       Design system completo (variables, componentes)
-js/data.js           Datos del cliente y sus proyectos — ÚNICO archivo
-                     pensado para editar al reutilizar con otro cliente
-js/store.js          Capa de persistencia (RSStore) — hoy localStorage
+js/data.js           Seed/fallback si Supabase no responde (no lo usa
+                     dashboard.html, que no depende de un cliente puntual)
+js/store.supabase.js Capa de persistencia (RSStore) — Supabase (Auth + DB)
 js/render.js         Motor de renderizado — lee CLIENT_DATA y dibuja
 js/admin.js          Modo administrador — estado de sesión, drag&drop,
                      modales de edición, tracking de cambios sin guardar
+js/dashboard.js       Dashboard ReelSupra — reutiliza RSStore/RS/RSAdmin
 DOCUMENTACION/       Esta carpeta
 ```
 
@@ -267,15 +269,23 @@ dispositivo. Los 5 pasos funcionaron. **Migración cerrada
 
 ### "Acceso al Portal" (gestión de clientes sin el dashboard de Supabase)
 
-Desde 2026-07-12, simplificado 2026-07-13 (ver
-[PLAN_ACCESO_PORTAL.md](PLAN_ACCESO_PORTAL.md)): el panel admin tiene
-un selector de clientes y, por cada cliente, una sección "Acceso al
-portal" — sin entrar nunca al dashboard de Supabase. La UI muestra un
-solo botón **"Dar acceso"** cuando el cliente no tiene acceso (el
-sistema decide internamente si es invitación nueva o restauración
-según si ya tiene una cuenta creada); "Reenviar invitación"/"Quitar
-acceso" cuando ya lo tiene; "Cambiar email"/"Restablecer contraseña"
-detrás de "Más opciones".
+Desde 2026-07-12, simplificado 2026-07-13 y 2026-07-14 (ver
+[PLAN_ACCESO_PORTAL.md](PLAN_ACCESO_PORTAL.md) y
+[PLAN_REELSUPRA_OS.md](PLAN_REELSUPRA_OS.md)): sin entrar nunca al
+dashboard de Supabase, y sin ningún estado técnico visible — el
+componente (`buildPortalAccessSection()` en `js/admin.js`, reutilizado
+tal cual desde `dashboard.js`) muestra solo 2 estados:
+
+- **Sin acceso** (nunca invitado o revocado): email vacío/editable +
+  un único botón **"Crear acceso"** (el sistema decide internamente si
+  es invitación nueva o restauración, según si el cliente ya tiene una
+  cuenta creada).
+- **Con acceso**: email bloqueado (solo lectura) + **"Editar
+  email"** / **"Reenviar acceso"** / **"Revocar acceso"**.
+
+No existe "Restablecer contraseña" como acción separada — "Reenviar
+acceso" cubre el mismo caso de uso (el cliente recibe un link nuevo
+para (re)establecer su contraseña).
 
 - Las acciones privilegiadas (crear cuenta, cambiar email de otro
   usuario) necesitan la Auth Admin API, que requiere la
@@ -286,9 +296,6 @@ detrás de "Más opciones".
   separado, scoped al JWT de quien llama) que quien invoca es
   realmente admin, y solo entonces usa el cliente con la
   `service_role key`.
-- Restablecer contraseña es la única acción que **no** pasa por la
-  Edge Function: `resetPasswordForEmail` es público en Supabase Auth,
-  se llama directo con la publishable key.
 - `clients.portal_email` / `portal_user_id` / `portal_access_status`
   (columnas aditivas, `supabase/05_client_access_columns.sql`) espejan
   el estado de Auth en la tabla, para que el panel lo muestre sin un
@@ -302,6 +309,32 @@ detrás de "Más opciones".
   real. v1.0 cierra con "Acceso al Portal" funcionando como gestión de
   cuentas, sin el aislamiento de lectura activo. Ver el plan y
   [DECISIONES.md](DECISIONES.md) para el detalle.
+
+### Dashboard ReelSupra (`dashboard.html`, desde 2026-07-14)
+
+Punto de entrada del admin, separado del Portal Cliente — ver
+[PLAN_REELSUPRA_OS.md](PLAN_REELSUPRA_OS.md). **No es un editor de
+contenido nuevo**: lista todos los clientes y proyectos, permite crear
+clientes/proyectos, y gestiona accesos inline (mismo componente de
+"Acceso al Portal" que el panel por-cliente) — pero editar el
+contenido de un cliente (Theme Builder, bloques, listas) sigue
+haciéndose en `index.html?client=<slug>&admin=true`/`project.html`,
+sin cambios; "Entrar" desde el Dashboard solo navega ahí.
+
+Reutiliza sin duplicar: `RSStore` (datos y Auth), `RS.icon()` (de
+`render.js`), y de `admin.js` — vía `window.RSAdmin` —
+`buildPortalAccessSection`, `tryActivateAdmin` (login) y `showToast`.
+No carga `js/data.js` (no depende de `window.CLIENT_DATA`, ya que no
+está atado a un cliente puntual) ni llama a `RSAdmin.init()` (esa
+función asume la estructura de `index.html`/`project.html` — topbar,
+drag&drop de bloques — que no existen acá).
+
+Crear cliente/proyecto usa `window.prompt()` para nombre y slug, no un
+modal nuevo — mismo criterio liviano que ya usa el resto del panel
+(ej. los `window.confirm()` de borrado). Las políticas RLS de
+`insert` para admin en `clients`/`projects` ya existían desde la
+migración original (`supabase/02_policies.sql`), no hizo falta SQL
+nuevo.
 
 ## Modo administrador (`js/admin.js`)
 

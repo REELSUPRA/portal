@@ -1,7 +1,7 @@
 # Plan — Evolución a "ReelSupra OS" (Dashboard admin + Acceso al Portal simple)
 
-Estado: **propuesta, sin implementar.** Ningún código se toca hasta que
-este documento se apruebe — pedido explícito del admin.
+Estado: **implementado (2026-07-14), verificado con Playwright contra
+datos reales.** Ver "Qué se implementó" al final del documento.
 
 ## 0. Resumen ejecutivo
 
@@ -67,14 +67,10 @@ login (se extrae a una función compartida para no duplicarlo entre
 `agency_settings` se mantienen tal cual — el Dashboard es una vista
 nueva sobre datos existentes, no un modelo de datos nuevo.
 
-Lo único a verificar/agregar: **políticas RLS de `insert`** para
-`clients` y `projects` restringidas a `is_admin()`. Hoy esas tablas
-tienen políticas de lectura (pública) y de escritura/`update` para
-admin, confirmadas en la migración original — falta confirmar si
-`insert` ya está cubierto o si hace falta un archivo SQL nuevo
-(`07_admin_insert_policies.sql`) con 2 policies (`clients: admin
-crea`, `projects: admin crea`). Se verifica al implementar, sin
-adivinar contenido que no se haya leído.
+**Verificado contra `supabase/02_policies.sql` (2026-07-13): ya
+existen** `"clients: solo admin inserta"` y `"projects: solo admin
+inserta"` (`with check (is_admin())`), de la migración original — no
+hace falta ningún SQL nuevo para `createClient()`/`createProject()`.
 
 ---
 
@@ -100,8 +96,8 @@ del campo.
 mismo que ya hace "Reenviar acceso" desde la perspectiva del cliente
 (recibe un link nuevo para (re)establecer su contraseña) — tener las
 dos es la clase de "acción innecesaria" que pediste sacar. El método
-`RSStore.resetPasswordForClient()` puede quedar sin usar o eliminarse
-del todo al implementar (se decide ahí, no cambia el plan).
+`RSStore.resetPasswordForClient()` se elimina del todo (no queda
+código sin usar).
 
 "Editar email": el campo pasa de bloqueado a editable al tocar el
 botón (in-place), con un único botón de confirmar — no una fila
@@ -131,9 +127,7 @@ aparte con validaciones extra.
    reutiliza CSS existente (`.admin-panel`, `.btn`, `.admin-field`,
    `.admin-group`) en vez de inventar un lenguaje visual aparte.
    Reutiliza el modal de login (extraído a función compartida).
-4. **`supabase/07_admin_insert_policies.sql`** (si hace falta tras
-   verificar 02_policies.sql): policies de `insert` para admin en
-   `clients`/`projects`.
+4. ~~SQL de policies de insert~~ — ya existen, sin cambios.
 5. **CSS**: pase de jerarquía visual sobre `.admin-group` — fondo sutil
    por sección (hoy es blanco sobre blanco con solo un borde),
    espaciado más ajustado, y diferenciar visualmente la acción primaria
@@ -184,3 +178,42 @@ aparte con validaciones extra.
 
 Con esto, el plan queda **aprobado** — se pasa a implementación según
 la sección 4.
+
+## 8. Qué se implementó (2026-07-14)
+
+Todo lo de la sección 4, sin desvíos del plan:
+
+- `js/store.supabase.js`: `listClients()` ahora trae también
+  `portal_email`/`portal_user_id`/`portal_access_status` (antes solo
+  `id, slug, name`). Nuevos `listProjectsLight()`, `createClient({name,
+  slug})`, `createProject(clientId, {name, slug})`.
+- `js/admin.js`: `buildPortalAccessSection()` reescrita a los 2 estados
+  visuales de la sección 3 (sin texto de estado, campo bloqueado/vacío
+  según corresponda, sin "Restablecer contraseña" — `RSStore.resetPasswordForClient()`
+  se eliminó del todo, ya no lo llama nadie). Expuesta en
+  `window.RSAdmin` junto con `tryActivateAdmin` y `showToast` para que
+  `dashboard.js` las reutilice sin duplicar lógica.
+- **`dashboard.html` + `js/dashboard.js`** (nuevos): login (mismo modal
+  de siempre), lista de clientes con "Acceso al Portal" inline (mismo
+  componente que el panel por-cliente), "Entrar" a cada cliente
+  (`index.html?client=<slug>&admin=true`, el editor de contenido no
+  cambió), "+ Nuevo cliente" y "+ Nuevo proyecto" (via `window.prompt`,
+  sin modal nuevo — consistente con el resto del panel, ej. los
+  `confirm()` de borrado).
+- CSS: `.admin-group` con fondo propio por sección (antes solo un
+  borde) para mejorar la jerarquía visual; clases nuevas
+  `.dashboard-*` reutilizando `.btn`/`.admin-field`/`.admin-link-btn`
+  existentes, sin lenguaje visual aparte.
+- Verificado con Playwright contra el proyecto real: `dashboard.html`
+  sin errores de consola ni requests fallidos, gate de login correcto,
+  `listClients()`/`listProjectsLight()` trayendo los datos reales (1
+  cliente, 2 proyectos), ambos estados de "Acceso al Portal"
+  (`sin_invitar` → "Crear acceso" único botón, campo vacío editable;
+  `invitado` → campo bloqueado + 3 botones) renderizando correctamente
+  tanto en el Dashboard como en el panel por-cliente.
+
+**Pendiente, fuera de este bloque:** resolver el email de invitación
+que llegaba rechazado (`otp_expired`, en diagnóstico — ver
+[PLAN_ACCESO_PORTAL.md](PLAN_ACCESO_PORTAL.md)) antes de dar por
+probado el flujo de "Crear acceso" de punta a punta con un cliente
+real.

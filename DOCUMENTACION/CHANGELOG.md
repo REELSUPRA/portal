@@ -3,6 +3,29 @@
 Registro cronológico de cambios, más granular que
 [VERSIONES.md](VERSIONES.md). Orden: más reciente arriba.
 
+## 2026-07-14 (Dashboard ReelSupra + Acceso al Portal a 2 estados)
+
+- Nuevo `dashboard.html` + `js/dashboard.js`: punto de entrada del
+  admin — lista clientes/proyectos, "+ Nuevo cliente"/"+ Nuevo
+  proyecto", "Entrar" a cada cliente (mismo editor de siempre, sin
+  cambios). No es un editor de contenido nuevo, ver
+  [PLAN_REELSUPRA_OS.md](PLAN_REELSUPRA_OS.md).
+- "Acceso al Portal" simplificado a 2 estados puramente visuales: sin
+  acceso → email vacío/editable + "Crear acceso"; con acceso → email
+  bloqueado + "Editar email"/"Reenviar acceso"/"Revocar acceso". Sin
+  texto de estado técnico. Se eliminó "Restablecer contraseña" como
+  acción separada (absorbida por "Reenviar acceso") y el método
+  `RSStore.resetPasswordForClient()`.
+- `RSStore`: `listClients()` ahora trae también email/estado de
+  acceso; nuevos `listProjectsLight()`, `createClient()`,
+  `createProject()`.
+- CSS: `.admin-group` con fondo propio por sección (mejor jerarquía
+  visual); clases `.dashboard-*` nuevas reutilizando componentes
+  existentes.
+- Verificado con Playwright contra el proyecto real: sin errores de
+  consola, ambos estados de acceso renderizando correctamente en el
+  Dashboard y en el panel por-cliente.
+
 ## 2026-07-13 (Revisión general pre-cierre v1.0: gate diferido + panel simplificado)
 
 - Decisión: el gate real de lectura por cliente
