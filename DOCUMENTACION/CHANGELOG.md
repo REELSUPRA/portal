@@ -3,6 +3,27 @@
 Registro cronológico de cambios, más granular que
 [VERSIONES.md](VERSIONES.md). Orden: más reciente arriba.
 
+## 2026-07-14 (Cierre autónomo hacia v1.0: Storage + verificación e2e)
+
+- Imágenes: implementado el upload a Supabase Storage
+  (`RSStore.uploadImage()`) para logo de proyecto, portada, logo de
+  cliente y favicon, con fallback automático a base64 si falla.
+  **Hallazgo real:** los buckets de `03_storage.sql` nunca se crearon
+  en producción — verificado con la API de Storage (`404 Bucket not
+  found`), no una suposición. Sin efecto visible hasta correr ese SQL
+  (mientras tanto sigue funcionando igual que siempre, en base64).
+- Dashboard: mensaje de error claro para slug duplicado al crear
+  cliente/proyecto (antes mostraba el error crudo de Postgres).
+- Verificación end-to-end: `index.html`/`project.html`/`dashboard.html`
+  en 5 viewports (Desktop, iPhone SE, iPhone 13, Pixel 7, iPad) — sin
+  errores de consola ni requests fallidos. Caso nuevo probado
+  específicamente: cliente recién creado sin proyectos (lo habilita el
+  Dashboard) no rompe el render ni el panel admin.
+- Revisado (sin encontrar bug) una vez más el flujo de invitación por
+  email — la causa sigue siendo el correo compartido de Supabase, fix
+  pendiente de una credencial de SMTP (Resend) que solo el admin puede
+  dar. Ver [PLAN_REELSUPRA_OS.md](PLAN_REELSUPRA_OS.md) sección 9.
+
 ## 2026-07-14 (Dashboard ReelSupra + Acceso al Portal a 2 estados)
 
 - Nuevo `dashboard.html` + `js/dashboard.js`: punto de entrada del

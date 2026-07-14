@@ -217,3 +217,43 @@ que llegaba rechazado (`otp_expired`, en diagnóstico — ver
 [PLAN_ACCESO_PORTAL.md](PLAN_ACCESO_PORTAL.md)) antes de dar por
 probado el flujo de "Crear acceso" de punta a punta con un cliente
 real.
+
+## 9. Cierre autónomo hacia v1.0 (2026-07-14, continuación)
+
+Autorizado a trabajar sin confirmaciones intermedias hasta cerrar
+Portal Cliente v1.0, deteniéndose solo por credenciales, pagos, o
+riesgo de pérdida de datos.
+
+- **Email de invitación:** sin nueva hipótesis — se revisó el código
+  de la Edge Function y el flujo completo una vez más, sin encontrar
+  ningún bug (confirma lo ya verificado antes). La causa sigue siendo
+  el correo compartido de Supabase (sin SMTP propio). El fix real
+  (SMTP con Resend) no se puede aplicar sin una credencial que solo el
+  admin puede dar — queda como intervención pendiente, no como tarea
+  abierta de código.
+- **Imágenes a Storage — implementado con hallazgo real:** se
+  verificó contra el proyecto real (no una suposición) que los 4
+  buckets de `03_storage.sql` nunca se crearon (`404 Bucket not
+  found`). Se implementó igual el código de subida
+  (`RSStore.uploadImage()`, `resizeImageToBlob()` en `admin.js`,
+  aplicado a los 4 modales de imagen: logo de proyecto, portada,
+  logo de cliente, favicon) con un **fallback automático a base64**
+  si la subida falla — probado con Playwright: sin buckets, sube,
+  falla por RLS/bucket inexistente, y cae a base64 sin romper nada,
+  mostrando "Imagen actualizada (respaldo local)". En cuanto se corra
+  el SQL pendiente, empieza a subir a Storage sin tocar código de
+  nuevo.
+- **Dashboard — revisado para uso diario:** mensaje de error más claro
+  cuando un slug ya existe ("Ese slug ya existe — probá con otro." en
+  vez del error crudo de Postgres). Se probó específicamente el caso
+  nuevo que el Dashboard habilita (crear un cliente vacío, sin
+  proyectos) contra `index.html`/`project.html` y el panel admin — sin
+  errores.
+- **Verificación end-to-end:** barrido con Playwright de
+  `index.html`/`project.html`/`dashboard.html` en Desktop, iPhone SE,
+  iPhone 13, Pixel 7 e iPad (15 combinaciones) — sin errores de
+  consola ni requests fallidos en ninguna. Panel admin verificado
+  también en mobile (iPhone 13).
+- **Bugs encontrados y corregidos en este bloque:** el mensaje de
+  error genérico de Postgres al crear un cliente/proyecto con slug
+  duplicado (único hallazgo real de esta ronda de pruebas).

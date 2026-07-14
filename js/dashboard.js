@@ -42,6 +42,14 @@
     });
   }
 
+  // Slug duplicado (23505 = unique_violation en Postgres) es el único
+  // error esperable en uso normal — el resto de errores no correspondía
+  // adivinarlos, se muestra el mensaje real.
+  function friendlyCreateError(e) {
+    if (e && e.code === "23505") return "Ese slug ya existe — probá con otro.";
+    return (e && e.message) || "No se pudo completar la acción";
+  }
+
   function createClientFlow() {
     const name = window.prompt("Nombre del cliente nuevo:");
     if (!name) return;
@@ -49,7 +57,7 @@
     if (!slug) return;
     RSStore.createClient({ name, slug: slugify(slug) })
       .then(() => { RSAdmin.showToast("Cliente creado"); loadDashboard(); })
-      .catch((e) => RSAdmin.showToast(e.message || "No se pudo crear el cliente", "error"));
+      .catch((e) => RSAdmin.showToast(friendlyCreateError(e), "error"));
   }
 
   function createProjectFlow(clientId, clientName) {
@@ -59,7 +67,7 @@
     if (!slug) return;
     RSStore.createProject(clientId, { name, slug: slugify(slug) })
       .then(() => { RSAdmin.showToast("Proyecto creado"); loadDashboard(); })
-      .catch((e) => RSAdmin.showToast(e.message || "No se pudo crear el proyecto", "error"));
+      .catch((e) => RSAdmin.showToast(friendlyCreateError(e), "error"));
   }
 
   // buildPortalAccessSection() espera el mismo shape camelCase que usa

@@ -175,9 +175,19 @@ del orden de bloques) no incluida en este pase.
   con acceso → email bloqueado + Editar email/Reenviar acceso/Revocar
   acceso), sin texto técnico ni "Restablecer contraseña" por separado.
   Detalle en [PLAN_REELSUPRA_OS.md](PLAN_REELSUPRA_OS.md).
-- **No cerrado todavía:** un email de invitación de prueba llegó
-  rechazado (`otp_expired`) — en diagnóstico, no confirmado si requiere
-  configurar SMTP propio (Resend) antes de dar por probado el flujo.
+- **Continuado de forma autónoma (2026-07-14):** imágenes migradas a
+  Supabase Storage en código (`RSStore.uploadImage()`, con fallback a
+  base64) — bloqueado en producción porque se verificó que los buckets
+  de `03_storage.sql` nunca se crearon (hallazgo real, no supuesto).
+  Verificación end-to-end completa (`index`/`project`/`dashboard` en 5
+  viewports) sin errores. Único bug encontrado y corregido: mensaje de
+  error crudo de Postgres al crear un cliente/proyecto con slug
+  duplicado.
+- **No cerrado todavía (requiere al admin, ver lista de intervenciones
+  en el último mensaje de la conversación):** correr `03_storage.sql`,
+  y resolver el email de invitación (`otp_expired`) configurando SMTP
+  propio (Resend) — sin esos dos pasos, "Crear acceso" y la subida de
+  imágenes no quedan 100% cerrados de punta a punta.
 
 ## Deployment — 2026-07-11
 

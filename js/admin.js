@@ -54,16 +54,20 @@
   let imageModalConfig = null;
   let isDirty = false;
 
-  // Achica una imagen subida al lado más largo (maxDim) antes de guardarla
-  // en CLIENT_DATA — sin esto, una foto de celular sin comprimir (varios MB
-  // en base64) puede superar la cuota de localStorage y hacer que save()
-  // falle en silencio, o simplemente volver la página lenta en mobile.
-  function resizeImageDataUrl(dataUrl, maxDim, mimeType) {
+  // Achica una imagen subida al lado más largo (maxDim) antes de
+  // guardarla — sin esto, una foto de celular sin comprimir (varios MB)
+  // hace lenta la carga en mobile. Devuelve un Blob (para subir a
+  // Storage) en vez de un data URL — más liviano que ida-y-vuelta por
+  // base64 para el mismo archivo.
+  function resizeImageToBlob(dataUrl, maxDim, mimeType) {
     return new Promise((resolve) => {
       const img = new Image();
       img.onload = () => {
         let { width, height } = img;
-        if (width <= maxDim && height <= maxDim) { resolve(dataUrl); return; }
+        if (width <= maxDim && height <= maxDim) {
+          fetch(dataUrl).then((r) => r.blob()).then(resolve);
+          return;
+        }
         const scale = Math.min(maxDim / width, maxDim / height);
         width = Math.round(width * scale);
         height = Math.round(height * scale);
@@ -71,10 +75,18 @@
         canvas.width = width;
         canvas.height = height;
         canvas.getContext("2d").drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL(mimeType, 0.85));
+        canvas.toBlob(resolve, mimeType, 0.85);
       };
-      img.onerror = () => resolve(dataUrl);
+      img.onerror = () => fetch(dataUrl).then((r) => r.blob()).then(resolve);
       img.src = dataUrl;
+    });
+  }
+
+  function blobToDataUrl(blob) {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.readAsDataURL(blob);
     });
   }
 
@@ -1094,18 +1106,32 @@
       if (!file) return;
       const reader = new FileReader();
       reader.onload = () => {
-        // Una foto de celular sin redimensionar puede pesar varios MB en
-        // base64 — supera la cuota de localStorage (guardado silenciosamente
-        // fallido, la imagen "desaparece" al recargar) y hace lenta la
-        // carga en mobile. Se achica al lado más largo antes de guardar,
-        // preservando PNG (por transparencia) y usando JPEG para el resto.
         const mimeType = file.type === "image/png" ? "image/png" : "image/jpeg";
-        resizeImageDataUrl(reader.result, 1280, mimeType).then((finalDataUrl) => {
-          imageModalConfig.set(finalDataUrl);
-          imageModalConfig.onSaved();
-          closeImageModal();
-          markDirty();
-          showToast("Imagen actualizada");
+        const ext = mimeType === "image/png" ? "png" : "jpg";
+        resizeImageToBlob(reader.result, 1280, mimeType).then((blob) => {
+          const path = `${imageModalConfig.storagePrefix}-${Date.now()}.${ext}`;
+          RSStore.uploadImage(imageModalConfig.bucket, path, blob, mimeType)
+            .then((url) => {
+              imageModalConfig.set(url);
+              imageModalConfig.onSaved();
+              closeImageModal();
+              markDirty();
+              showToast("Imagen actualizada");
+            })
+            .catch((err) => {
+              // Storage no disponible (bucket sin crear todavía, sin red,
+              // etc.) — respaldo: mismo comportamiento que antes de esta
+              // migración, base64 directo en CLIENT_DATA. No rompe la
+              // función mientras tanto.
+              console.warn("RSAdmin: no se pudo subir a Storage, uso base64 como respaldo.", err);
+              blobToDataUrl(blob).then((dataUrl) => {
+                imageModalConfig.set(dataUrl);
+                imageModalConfig.onSaved();
+                closeImageModal();
+                markDirty();
+                showToast("Imagen actualizada (respaldo local)");
+              });
+            });
         });
       };
       reader.readAsDataURL(file);
@@ -1136,9 +1162,12 @@
   }
 
   function openLogoModal() {
+    const project = currentProject();
     openImageModal({
       title: "Logo del proyecto",
-      set: (v) => { currentProject().logoUrl = v; },
+      bucket: "logos",
+      storagePrefix: `project-${project._id || project.id}`,
+      set: (v) => { project.logoUrl = v; },
       onSaved: () => { RS.renderProjectDetail(); RS.hydrateIcons(); },
       removedMessage: "Logo quitado, volviendo al emoji",
     });
@@ -1147,6 +1176,8 @@
   function openCoverModal() {
     openImageModal({
       title: "Portada del cliente",
+      bucket: "covers",
+      storagePrefix: `cover-${window.CLIENT_DATA.client._id}`,
       set: (v) => { window.CLIENT_DATA.client.coverImage = v; },
       onSaved: () => { RS.renderHero(); RS.hydrateIcons(); },
       removedMessage: "Portada quitada",
@@ -1156,6 +1187,8 @@
   function openClientLogoModal() {
     openImageModal({
       title: "Logo del cliente",
+      bucket: "logos",
+      storagePrefix: `client-logo-${window.CLIENT_DATA.client._id}`,
       set: (v) => { window.CLIENT_DATA.client.logoUrl = v; },
       onSaved: () => { RS.renderTopbar({ showBack: !!document.getElementById("projectHero") }); RS.hydrateIcons(); },
       removedMessage: "Logo quitado, volviendo al punto de marca",
@@ -1165,6 +1198,8 @@
   function openFaviconModal() {
     openImageModal({
       title: "Favicon del portal",
+      bucket: "logos",
+      storagePrefix: `favicon-${window.CLIENT_DATA.client._id}`,
       set: (v) => { window.CLIENT_DATA.client.faviconUrl = v; },
       onSaved: () => RS.applyBranding(),
       removedMessage: "Favicon quitado",

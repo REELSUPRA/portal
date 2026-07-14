@@ -362,6 +362,21 @@ window.RSStore = (() => {
       });
   }
 
+  // Sube una imagen a Storage y devuelve la URL pública — reemplaza el
+  // guardado en base64 dentro de CLIENT_DATA (ver supabase/03_storage.sql).
+  // bucket: "logos" | "covers" | "documents" | "media". path: único
+  // (admin.js le agrega Date.now() para evitar colisiones de caché).
+  function uploadImage(bucket, path, blob, contentType) {
+    return client()
+      .storage.from(bucket)
+      .upload(path, blob, { upsert: true, contentType })
+      .then(({ error }) => {
+        if (error) throw error;
+        const { data } = client().storage.from(bucket).getPublicUrl(path);
+        return data.publicUrl;
+      });
+  }
+
   // Invitar/reenviar/restaurar/revocar/cambiar email — todas pasan por
   // la Edge Function (única pieza con la service_role key). No hay
   // "no autorizado" silencioso: si la función devuelve ok:false, se
@@ -379,6 +394,6 @@ window.RSStore = (() => {
   return {
     load, save, clear, hydrate,
     signIn, signOut, getSession,
-    listClients, listProjectsLight, createClient, createProject, manageAccess,
+    listClients, listProjectsLight, createClient, createProject, manageAccess, uploadImage,
   };
 })();

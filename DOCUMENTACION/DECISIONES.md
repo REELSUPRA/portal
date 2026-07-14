@@ -6,6 +6,26 @@ por cada cambio (eso va en [CHANGELOG.md](CHANGELOG.md)).
 
 ---
 
+## 2026-07-14 — Imágenes a Storage con fallback automático a base64
+
+**Contexto:** al implementar la subida a Supabase Storage (pedido de
+cierre de v1.0), se verificó contra el proyecto real que los buckets
+de `03_storage.sql` nunca se habían creado — a diferencia de lo que
+decía la documentación previa.
+
+**Decisión:** implementar igual el código de subida, pero con un
+fallback automático: si la subida a Storage falla (bucket inexistente,
+sin red, RLS, lo que sea), el flujo cae al comportamiento anterior
+(base64 dentro de `CLIENT_DATA`) sin romper la función ni requerir un
+segundo deploy. **Por qué:** correr el SQL de buckets requiere al
+admin (sin credenciales de base de datos de mi lado), y bajo la
+autorización de trabajo autónomo no correspondía dejar una función
+rota esperando esa intervención — el fallback hace que el código
+quede terminado y probado ahora, y empiece a usar Storage de verdad
+en cuanto se corra el SQL pendiente, sin tocar código de nuevo.
+
+---
+
 ## 2026-07-14 — Evolución a "ReelSupra OS": Dashboard admin separado, sin reescribir el editor
 
 **Contexto:** con "Acceso al Portal" ya funcionando pero un email de

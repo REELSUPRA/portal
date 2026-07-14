@@ -324,14 +324,17 @@ migración.
 
 ## Pendiente (fuera del alcance de "cerrar la migración" — mejoras futuras)
 
-1. **Imágenes a Storage** (sección 6 de este plan) — todavía no
-   implementado; los logos/portada siguen guardándose en base64
-   dentro de `CLIENT_DATA` (ya redimensionados a 1280px desde la fase
-   anterior, así que no rompen nada ni son gigantes, pero no están en
-   los buckets de Storage todavía).
-2. **"Exportar JSON"** sigue en el panel — no se quitó todavía (no era
-   necesario para el cierre de esta migración; se puede sacar en
-   cualquier momento sin riesgo).
+1. **Imágenes a Storage** (sección 6 de este plan) — **código
+   implementado (2026-07-14)**: subir logo/portada/favicon ahora sube
+   a Storage (`RSStore.uploadImage()`) y guarda la URL pública, en vez
+   de base64. **Bloqueado en producción:** se verificó contra el
+   proyecto real que los 4 buckets de `supabase/03_storage.sql`
+   **nunca se crearon** (`404 Bucket not found` en `logos`), pese a que
+   la documentación anterior decía lo contrario. Mientras el SQL no se
+   corra, el código cae automáticamente a base64 (mismo comportamiento
+   de siempre, sin romper nada) — ver
+   [PLAN_REELSUPRA_OS.md](PLAN_REELSUPRA_OS.md).
+2. ~~"Exportar JSON"~~ — sacado del panel el 2026-07-13.
 3. La decisión de producto "un cliente por deployment vs. un portal
    multi-cliente" (ver [DECISIONES.md](DECISIONES.md)) sigue abierta —
    el esquema soporta cualquiera de las dos.
