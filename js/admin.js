@@ -145,8 +145,14 @@
       const password = loginModalEl.querySelector("#loginPasswordInput").value;
       if (!email || !password) return;
       RSStore.signIn(email, password).then((ok) => {
-        if (ok) closeLoginModal(true);
-        else showToast("Email o contraseña incorrectos", "error");
+        if (!ok) { showToast("Email o contraseña incorrectos", "error"); return; }
+        // Login correcto no alcanza: si la cuenta es de un cliente
+        // (profiles.role='client'), no debe activar el modo admin —
+        // se cierra esa sesión de nuevo en vez de dejarla "a medias".
+        RSStore.isCurrentUserAdmin().then((isAdmin) => {
+          if (isAdmin) { closeLoginModal(true); return; }
+          RSStore.signOut().then(() => showToast("Esta cuenta no tiene permisos de administrador", "error"));
+        });
       });
     };
 
@@ -1271,7 +1277,13 @@
   // que window.prompt() (síncrono) devolviera algo.
   function detectAdminMode() {
     return RSStore.getSession().then((hasSession) => {
-      if (hasSession) { setAdminMode(true); return; }
+      if (hasSession) {
+        // Bug real encontrado 2026-07-14: getSession() solo dice "hay
+        // sesión", no "es de un admin" — un cliente logueado (ej. tras
+        // aceptar una invitación en el mismo navegador) activaba el
+        // panel visualmente aunque el backend rechazara todo con 403.
+        return RSStore.isCurrentUserAdmin().then((isAdmin) => setAdminMode(isAdmin));
+      }
       if (wantsAdminViaUrl()) return tryActivateAdmin();
       setAdminMode(false);
     });

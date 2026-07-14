@@ -289,6 +289,30 @@ window.RSStore = (() => {
     }
   }
 
+  // getSession() solo dice "¿hay una sesión?" — no alcanza para decidir
+  // modo admin, porque un CLIENTE logueado (profiles.role='client')
+  // también tiene una sesión válida. Esta función es la que realmente
+  // importa para el gate de admin: ¿esta sesión es de un admin?
+  function isCurrentUserAdmin() {
+    try {
+      return client()
+        .auth.getUser()
+        .then(({ data }) => {
+          if (!data || !data.user) return false;
+          return client()
+            .from("profiles")
+            .select("role")
+            .eq("id", data.user.id)
+            .single()
+            .then(({ data: profile }) => !!profile && profile.role === "admin")
+            .catch(() => false);
+        })
+        .catch(() => false);
+    } catch (e) {
+      return Promise.resolve(false);
+    }
+  }
+
   // ---- "Acceso al Portal" + Dashboard ReelSupra ----
 
   // Lista para el selector de clientes y el Dashboard — trae también
@@ -393,7 +417,7 @@ window.RSStore = (() => {
 
   return {
     load, save, clear, hydrate,
-    signIn, signOut, getSession,
+    signIn, signOut, getSession, isCurrentUserAdmin,
     listClients, listProjectsLight, createClient, createProject, manageAccess, uploadImage,
   };
 })();

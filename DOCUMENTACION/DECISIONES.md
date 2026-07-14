@@ -6,6 +6,32 @@ por cada cambio (eso va en [CHANGELOG.md](CHANGELOG.md)).
 
 ---
 
+## 2026-07-14 — El modo admin debe verificar rol, no solo sesión
+
+**Contexto:** tras configurar SMTP propio (Resend, dominio verificado)
+sin que "Reenviar acceso" empezara a funcionar, se pidió una auditoría
+completa en vez de seguir asumiendo que el problema era el email. Con
+logs reales de la Edge Function (403 "No autorizado") y una consulta
+directa a `auth.users`/`profiles`, se encontró que el navegador tenía
+guardada la sesión de un CLIENTE (de una verificación anterior en el
+mismo navegador), no la del admin.
+
+**Decisión:** `detectAdminMode()` y el login del modal admin pasan a
+verificar `profiles.role === 'admin'` (nuevo
+`RSStore.isCurrentUserAdmin()`), no solo "¿hay una sesión de Supabase
+activa?". **Por qué:** sin esto, cualquier sesión válida — incluida la
+de un cliente que aceptó una invitación en el mismo navegador —
+activaba visualmente el panel admin, aunque el backend (RLS + la Edge
+Function) rechazara correctamente cualquier acción real. Era un gap
+real de UX/seguridad: la interfaz mentía sobre el estado de la sesión.
+
+**Consecuencia:** se reseteó la cuenta de prueba de Juan (borrada de
+`auth.users`, `clients` vuelto a `sin_invitar`) para poder probar una
+invitación limpia — autorizado explícitamente por el admin, incluía
+"borrar/recrear el usuario de prueba si hace falta".
+
+---
+
 ## 2026-07-14 — Imágenes a Storage con fallback automático a base64
 
 **Contexto:** al implementar la subida a Supabase Storage (pedido de

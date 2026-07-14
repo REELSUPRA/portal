@@ -3,6 +3,26 @@
 Registro cronológico de cambios, más granular que
 [VERSIONES.md](VERSIONES.md). Orden: más reciente arriba.
 
+## 2026-07-14 (Bug real encontrado: sesión de cliente activaba el modo admin)
+
+- Auditoría con logs reales (Edge Function) y consultas directas a
+  `auth.users`/`profiles` (Management API, PAT temporal revocado al
+  terminar) — no más suposiciones sobre SMTP. Causa real: una sesión
+  de cliente (Juan, de una prueba anterior en el mismo navegador)
+  quedó guardada y `detectAdminMode()` la aceptaba como si fuera de
+  admin, porque solo comprobaba "hay sesión", no "es de un admin". El
+  backend rechazaba todo con 403 correctamente; la UI no.
+- Corregido: `RSStore.isCurrentUserAdmin()` (nuevo) verifica
+  `profiles.role`; `detectAdminMode()` y el login del modal admin lo
+  usan en vez de solo "hay sesión". Verificado sin regresiones (15
+  combinaciones página/viewport).
+- Reseteada la cuenta de prueba de Juan (borrada de `auth.users`,
+  `clients` vuelto a `sin_invitar`) para una prueba de invitación
+  limpia — autorizado explícitamente por el admin.
+- Pendiente: el admin debe volver a loguearse como admin real (la
+  sesión vieja de Juan quedó guardada en el navegador) antes de la
+  prueba final.
+
 ## 2026-07-14 (Storage: buckets corridos y verificados)
 
 - `03_storage.sql` (versión idempotente) corrido por el admin. Un

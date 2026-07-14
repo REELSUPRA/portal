@@ -1,13 +1,14 @@
 # Plan — "Acceso al Portal" (gestión de clientes sin el dashboard de Supabase)
 
-Estado: **infraestructura desplegada; UI simplificada aún más el
-2026-07-14 (ver [PLAN_REELSUPRA_OS.md](PLAN_REELSUPRA_OS.md) sección
-3 — es la versión vigente de "Acceso al Portal", reemplaza la
-descripción de botones de la sección 2 de este documento). Pendiente:
-resolver un email de invitación que llegó rechazado (`otp_expired`,
-en diagnóstico — ver sección 3) y, recién después, la prueba
-end-to-end con un email propio.** El gate real de lectura por cliente
-(`06_client_access_gate.sql`) queda **diferido a v1.1**, decisión
+Estado: **causa raíz real encontrada y corregida (2026-07-14, ver
+sección 6) — no era el email/SMTP, era un bug de sesión en el
+frontend.** UI simplificada el 2026-07-14 (ver
+[PLAN_REELSUPRA_OS.md](PLAN_REELSUPRA_OS.md) sección 3 — es la
+versión vigente de "Acceso al Portal", reemplaza la descripción de
+botones de la sección 2 de este documento). Pendiente: la prueba
+end-to-end final con el admin logueado correctamente (ver sección 6).
+El gate real de lectura por cliente (`06_client_access_gate.sql`)
+queda **diferido a v1.1**, decisión
 explícita — ver sección 4.
 
 ## 1. Por qué esta arquitectura
@@ -187,3 +188,57 @@ reales de Supabase): sin errores de consola, estructura de acordeón
 correcta, "Acceso al portal" mostrando "Reenviar invitación"/"Quitar
 acceso" (estado real: `invitado`) con "Más opciones" revelando
 "Restablecer contraseña"/"Cambiar email" correctamente.
+
+## 6. Causa raíz real del email de invitación — no era SMTP (2026-07-14)
+
+Después de configurar Resend con dominio propio (DKIM/SPF verificados)
+y que "Reenviar acceso" siguiera sin mandar nada, se auditó de punta a
+punta con logs reales y consultas directas a la base (vía Management
+API, PAT temporal — revocado al terminar), en vez de seguir
+suponiendo. Hallazgos:
+
+1. **Logs de la Edge Function:** el clic real en "Reenviar acceso"
+   devolvió `403 "No autorizado"` — **nunca llegó a llamar
+   `inviteUserByEmail()`**. El problema nunca fue el email en sí.
+2. **Auditoría de `auth.users`/`profiles`:** la cuenta de prueba de
+   Juan (`alereelsupra@gmail.com`) tenía `confirmed_at` y
+   `last_sign_in_at` del 2026-07-13 — se había logueado una vez,
+   probablemente durante la verificación de esa fecha ("loguearse con
+   la cuenta nueva").
+3. **Causa real:** esa verificación se hizo en el mismo navegador que
+   el panel admin. Al loguearse como Juan, Supabase sobrescribió la
+   sesión guardada — el navegador quedó con la sesión de **Juan**, no
+   la del admin. El panel se seguía viendo como "modo administrador"
+   porque **`detectAdminMode()` tenía un bug real**: solo comprobaba
+   "¿hay una sesión?" (`RSStore.getSession()`), no "¿esta sesión es de
+   un admin?" — cualquier sesión válida (incluida la de un cliente)
+   activaba el panel visualmente. El backend sí rechazaba todo
+   correctamente (por eso el 403), pero la UI no reflejaba ese
+   rechazo de forma clara.
+
+**Corrección aplicada:**
+- Nuevo `RSStore.isCurrentUserAdmin()` — consulta `profiles.role` para
+  el usuario de la sesión actual (no solo si existe una sesión).
+- `detectAdminMode()` ahora usa `isCurrentUserAdmin()` en vez de
+  `getSession()` a secas.
+- El login del modal admin también verifica el rol después de un
+  login válido — si las credenciales son correctas pero la cuenta no
+  es admin, se cierra esa sesión con un mensaje claro en vez de
+  activar el panel.
+- Verificado con Playwright (sin sesión activa, ambas rutas de boot
+  siguen sin errores en 15 combinaciones de página/viewport — no hubo
+  regresión).
+
+**Reseteo del entorno de prueba (autorizado explícitamente):** se
+borró la cuenta de prueba de Juan en `auth.users` (cascada limpia
+sobre `profiles`, confirmada) y se reseteó la fila de `clients` a
+`portal_email/portal_user_id: null`, `portal_access_status:
+'sin_invitar'` — estado limpio para una invitación de punta a punta
+real.
+
+**Pendiente — necesita al admin, no lo puedo hacer yo:** cerrar sesión
+en el navegador donde se usa el panel/Dashboard y volver a loguearse
+con la cuenta real de admin (para reemplazar la sesión de Juan que
+quedó guardada), y recién ahí probar "Crear acceso" de nuevo. Con el
+bug corregido, esa sesión vieja ya no debería activar el modo admin
+por error — pero conviene un login limpio para la prueba final.
