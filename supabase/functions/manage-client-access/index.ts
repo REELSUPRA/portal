@@ -25,6 +25,9 @@
 //                      pero NO borra la cuenta de Auth ni portal_user_id
 //                      — así "grant" puede restaurarlo después.
 //   - "change_email" — actualiza el email en Auth + en clients.
+//   - "set_password" — el admin le asigna una contraseña nueva a una
+//                      cuenta que YA existe, sin borrarla/recrearla
+//                      (ej: el cliente la perdió, o se creó mal).
 // ============================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -151,6 +154,19 @@ Deno.serve(async (req) => {
       }
       await adminClient.from("clients").update({ portal_access_status: "revocado" }).eq("id", clientId);
       return json({ ok: true, portalEmail: clientRow.portal_email, portalAccessStatus: "revocado" });
+    }
+
+    if (action === "set_password") {
+      if (!password || password.length < 8) {
+        return json({ ok: false, error: "La contraseña debe tener al menos 8 caracteres" }, 400);
+      }
+      if (!clientRow.portal_user_id) {
+        return json({ ok: false, error: "Este cliente todavía no tiene una cuenta — creala primero." }, 400);
+      }
+      const { error: pwErr } = await adminClient.auth.admin.updateUserById(clientRow.portal_user_id, { password });
+      if (pwErr) return json({ ok: false, error: pwErr.message }, 400);
+
+      return json({ ok: true, portalEmail: clientRow.portal_email, portalAccessStatus: clientRow.portal_access_status });
     }
 
     if (action === "change_email") {

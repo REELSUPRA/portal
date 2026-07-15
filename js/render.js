@@ -262,12 +262,22 @@ const RS = (() => {
         </button>`
       : "";
 
+    // Visible para cualquier sesión activa (admin o cliente) — antes
+    // la única forma de salir era el atajo de teclado o el botón
+    // "Salir" del Dashboard, que un cliente logueado nunca ve.
+    const logoutBtn = window.RS_HAS_SESSION
+      ? `<button class="admin-toggle" id="logoutBtn" aria-label="Cerrar sesión">
+          ${icon("log-out")} Cerrar sesión
+        </button>`
+      : "";
+
     el.innerHTML = `
       <div class="topbar__inner">
         ${left}
         <div class="topbar__actions">
           ${adminBadge}
           ${adminToggleBtn}
+          ${logoutBtn}
         </div>
       </div>`;
   }

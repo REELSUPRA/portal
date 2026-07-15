@@ -3,6 +3,33 @@
 Registro cronológico de cambios, más granular que
 [VERSIONES.md](VERSIONES.md). Orden: más reciente arriba.
 
+## 2026-07-15 (Cerrar sesión visible + restablecer contraseña sin recrear la cuenta)
+
+- **Botón "Cerrar sesión"** en el topbar (`js/render.js`, delegado en
+  `js/admin.js`): visible para cualquier sesión activa (admin o
+  cliente) — antes la única forma de salir era el atajo de teclado o
+  el "Salir" del Dashboard, que un cliente logueado nunca ve.
+- **Edge Function**: nueva acción `set_password`
+  (`auth.admin.updateUserById(userId, { password })`) — le asigna una
+  contraseña nueva a una cuenta que ya existe, sin borrarla ni
+  recrearla. Desplegada y verificada (gate de auth intacto).
+- Panel (`buildPortalAccessSection`): para un cliente que ya tiene
+  acceso (como Juan), botón "Restablecer contraseña" junto a Editar
+  email/Reenviar/Revocar — al tocarlo aparece el mismo campo +
+  "Generar" que en la creación manual, y "Guardar contraseña" aplica
+  el cambio mostrando la nueva contraseña en un mensaje persistente.
+- Motivo: al probar el flujo manual se confirmó que el código nuevo
+  SÍ estaba desplegado y funcionando (verificado contra la URL de
+  producción con Playwright, ejecutando el componente real) — lo que
+  faltaba no era un bug, sino que el único cliente real (Juan) ya
+  tenía acceso, así que nunca iba a ver el campo de contraseña de una
+  cuenta *nueva*. Esto agrega la vía para administrar una cuenta que
+  ya existe, sin depender de crear un cliente de prueba.
+- Verificado: sintaxis + type-check de la Edge Function, Playwright
+  (botón de logout visible/oculto según sesión y rol, flujo completo
+  de "Restablecer contraseña" con sus botones), sin errores de
+  consola.
+
 ## 2026-07-15 (Creación manual de acceso — reemplaza la dependencia del email)
 
 - Pedido explícito: dejar de depender del email de invitación (fuente

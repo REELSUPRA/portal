@@ -708,6 +708,7 @@
     let pendingEmail = data.client.portalEmail || "";
     let pendingPassword = "";
     let editingEmail = false;
+    let settingPassword = false;
 
     const emailWrap = document.createElement("div");
     emailWrap.className = "admin-field";
@@ -807,11 +808,32 @@
         });
     }
 
+    // Cambia la contraseña de una cuenta que YA existe (sin
+    // borrarla/recrearla) — para cuando el cliente la perdió o hace
+    // falta asignarle una nueva a mano.
+    function runSetPassword(password) {
+      return RSStore.manageAccess("set_password", data.client._id, null, password)
+        .then(() => {
+          settingPassword = false;
+          pendingPassword = "";
+          render();
+          if (onChange) onChange();
+          window.alert(
+            `Contraseña actualizada.\n\nNueva contraseña: ${password}\n\n` +
+            `Compartísela al cliente por un canal seguro — no vuelve a mostrarse después de cerrar este mensaje.`
+          );
+        })
+        .catch((e) => {
+          showToast(e.message || "No se pudo completar la acción", "error");
+        });
+    }
+
     function render() {
       actionsRow.innerHTML = "";
       const status = data.client.portalAccessStatus;
       const hasAccess = status === "invitado";
       const hasAccount = !!data.client.portalUserId;
+      if (!hasAccess) settingPassword = false;
 
       // Bloqueado (solo lectura) mientras hay acceso y no se tocó
       // "Editar email" — evita cambios accidentales del email de un
@@ -819,11 +841,17 @@
       emailInput.readOnly = hasAccess && !editingEmail;
       emailInput.classList.toggle("admin-field__input--locked", emailInput.readOnly);
 
+      const showPasswordField = (!hasAccess && !hasAccount) || (hasAccess && settingPassword);
+      if (showPasswordField) {
+        if (!passwordWrap.isConnected) wrap.insertBefore(passwordWrap, actionsRow);
+        passwordInput.value = pendingPassword;
+      } else if (passwordWrap.isConnected) {
+        passwordWrap.remove();
+      }
+
       if (!hasAccess) {
         if (!hasAccount) {
           // Cuenta nueva: hace falta definir la contraseña temporal.
-          if (!passwordWrap.isConnected) wrap.insertBefore(passwordWrap, actionsRow);
-          passwordInput.value = pendingPassword;
           actionsRow.appendChild(
             actionBtn(`${RS.icon("send")} Crear acceso`, () => {
               if (!pendingEmail) { showToast("Ingresá un email primero", "error"); return Promise.resolve(); }
@@ -837,7 +865,6 @@
         } else {
           // Acceso revocado antes: la cuenta ya existe con su
           // contraseña original, no hace falta pedir una nueva.
-          if (passwordWrap.isConnected) passwordWrap.remove();
           actionsRow.appendChild(
             actionBtn(`${RS.icon("send")} Crear acceso`, () => {
               if (!pendingEmail) { showToast("Ingresá un email primero", "error"); return Promise.resolve(); }
@@ -847,8 +874,6 @@
         }
         return;
       }
-
-      if (passwordWrap.isConnected) passwordWrap.remove();
 
       if (editingEmail) {
         actionsRow.appendChild(
@@ -873,6 +898,28 @@
           })
         );
       }
+
+      if (settingPassword) {
+        actionsRow.appendChild(
+          actionBtn(`${RS.icon("check")} Guardar contraseña`, () => {
+            if (!pendingPassword || pendingPassword.length < 8) {
+              showToast("Ingresá o generá una contraseña de al menos 8 caracteres", "error");
+              return Promise.resolve();
+            }
+            return runSetPassword(pendingPassword);
+          }, "primary")
+        );
+      } else {
+        actionsRow.appendChild(
+          actionBtn(`${RS.icon("key")} Restablecer contraseña`, () => {
+            settingPassword = true;
+            pendingPassword = "";
+            render();
+            return Promise.resolve();
+          })
+        );
+      }
+
       actionsRow.appendChild(
         actionBtn(`${RS.icon("send")} Reenviar acceso`, () => runAccessAction("resend"))
       );
@@ -1335,6 +1382,10 @@
     if (topbarEl && !topbarEl.dataset.adminBound) {
       topbarEl.dataset.adminBound = "true";
       topbarEl.addEventListener("click", (e) => {
+        if (e.target.closest("#logoutBtn")) {
+          RSStore.signOut().then(() => window.location.reload());
+          return;
+        }
         if (!e.target.closest("#adminToggle")) return;
         if (!window.RS_ADMIN_MODE) {
           toggleAdminMode().then(() => { if (window.RS_ADMIN_MODE) openPanel(); });
