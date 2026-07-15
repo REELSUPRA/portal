@@ -56,9 +56,13 @@ sin roles múltiples — ver `DOCUMENTACION/PLAN_REELSUPRA_OS.md` sección
     relacional + contenido jsonb", ver `supabase/01_schema.sql`.
   - **Auth:** Supabase Auth (email + contraseña). No hay
     auto-registro público — las cuentas de cliente las crea el admin
-    vía Auth Admin API (`inviteUserByEmail`). `profiles.role`
-    (`admin`/`client`) es la fuente de verdad de permisos, tanto en
-    RLS como en el frontend.
+    vía Auth Admin API, por dos vías: `inviteUserByEmail` (manda un
+    email real, requiere SMTP funcionando) o `createUser` con
+    contraseña temporal definida a mano (sin email, acción
+    `create_manual`, agregada 2026-07-15 porque depender del email
+    para cada cliente nuevo consumía demasiado tiempo de debugging de
+    SMTP). `profiles.role` (`admin`/`client`) es la fuente de verdad
+    de permisos, tanto en RLS como en el frontend.
   - **Storage:** 4 buckets (`logos`, `covers`, `documents`, `media`),
     lectura pública / escritura solo-admin vía RLS sobre
     `storage.objects`. Con fallback automático a base64 si el upload
@@ -67,8 +71,10 @@ sin roles múltiples — ver `DOCUMENTACION/PLAN_REELSUPRA_OS.md` sección
   - **Edge Functions:** `manage-client-access` (Deno) — única pieza
     del proyecto que tiene la `service_role key`. Verifica que quien
     llama es admin (con un cliente scoped al JWT del caller) antes de
-    usar el cliente con privilegios. Acciones: `invite`, `resend`,
-    `grant`, `revoke`, `change_email`.
+    usar el cliente con privilegios. Acciones: `invite` (email),
+    `create_manual` (cuenta + contraseña, sin email), `resend`,
+    `grant`, `revoke`, `change_email`, `set_password` (cambia la
+    contraseña de una cuenta que ya existe, sin recrearla).
 - **Hosting:** Netlify, deploy automático en cada push a `main`, sin
   build command, publish directory = raíz. Producción:
   **https://portalreelsupra.netlify.app/**. Redirect propio en
@@ -103,11 +109,16 @@ sección 6, es un bug ya corregido que antes solo miraba "¿hay
 sesión?"). Con eso: crear/editar clientes y proyectos, gestionar
 accesos, editar contenido (Theme Builder, bloques, listas).
 
-**Flujo cliente:** recibe una invitación por email (Resend) → clic en
-el link → establece contraseña → login → ve `index.html?client=<slug>`
-con su contenido, **sin ninguna opción administrativa visible**
-(botón Admin oculto para `role=client`, ver sección 8 de este
-documento).
+**Flujo cliente:** por dos vías posibles — (a) recibe una invitación
+por email (Resend), clic en el link, establece contraseña; o (b) el
+admin le crea la cuenta manualmente en el panel (email + contraseña
+temporal, sin email de por medio) y se la pasa por otro canal
+(WhatsApp, etc.). En ambos casos, el login es el mismo modal genérico
+("Iniciar sesión", reutilizado del botón del topbar): si la cuenta es
+`role=client`, entra directo a `index.html?client=<su-slug>`
+(`RSStore.getCurrentUserAccess()` resuelve el slug) — **sin ninguna
+opción administrativa visible** (botón Admin oculto, solo ve "Cerrar
+sesión").
 
 **Relación Admin → Clientes → Proyectos → Portal:**
 - Un admin administra **N clientes** (tabla `clients`, no "un
@@ -136,23 +147,38 @@ documento).
   texto plano ni gate salteable desde la consola).
 - Dashboard ReelSupra (`dashboard.html`): lista clientes/proyectos,
   crea clientes/proyectos nuevos, gestiona accesos inline.
-- "Acceso al Portal" simplificado a 2 estados visuales ("Crear
-  acceso" / "Editar email · Reenviar acceso · Revocar acceso"), sin
+- "Acceso al Portal" simplificado a 2 estados visuales base ("Crear
+  acceso", pidiendo contraseña si la cuenta es nueva / "Editar email ·
+  Restablecer contraseña · Reenviar acceso · Revocar acceso"), sin
   texto técnico, vía la Edge Function `manage-client-access`.
 - Imágenes migradas a Supabase Storage (con fallback a base64 si el
   upload falla) — 4 buckets verificados contra el proyecto real.
-- **Flujo de invitación cerrado de punta a punta (2026-07-15):**
-  Crear acceso → email real vía Resend → cliente crea contraseña →
-  login → ve su portal. Verificado con datos reales (`auth.users`,
-  `clients.portal_access_status`), no solo "llegó el email".
+- **Flujo de invitación por email cerrado de punta a punta
+  (2026-07-15):** Crear acceso → email real vía Resend → cliente crea
+  contraseña → login → ve su portal. Verificado con datos reales
+  (`auth.users`, `clients.portal_access_status`), no solo "llegó el
+  email".
+- **Creación manual de acceso (2026-07-15, reemplaza la dependencia
+  del email para clientes nuevos):** el admin define email +
+  contraseña temporal directo en el panel (botón "Generar" incluido),
+  sin mandar ningún email — acción `create_manual`. El flujo de
+  invitación por email sigue disponible, no se retiró.
+- **Restablecer contraseña (2026-07-15):** para un cliente que ya
+  tiene cuenta, el admin puede asignarle una contraseña nueva sin
+  borrar/recrear la cuenta (acción `set_password`).
+- **Botón "Cerrar sesión" visible (2026-07-15)** en el topbar de
+  `index.html`/`project.html`, para cualquier sesión activa (admin o
+  cliente) — antes la única forma de salir era el atajo de teclado o
+  el "Salir" del Dashboard, que un cliente logueado nunca ve.
 - Bug real corregido: el modo admin del frontend ahora verifica
   `profiles.role==='admin'`, no solo "hay una sesión" — antes, una
   sesión de cliente guardada en el mismo navegador podía activar
   visualmente el panel admin (el backend igual rechazaba todo por
   RLS, pero la UI no lo reflejaba).
-- Botón "Admin" del topbar oculto para sesiones de cliente logueadas
-  (sigue visible para admins reales y visitantes anónimos, que
-  necesitan poder loguearse).
+- Botón "Admin"/"Iniciar sesión" del topbar (mismo botón, label según
+  estado) oculto para sesiones de cliente logueadas (sigue visible
+  para admins reales y visitantes anónimos, que necesitan poder
+  loguearse).
 - Overlay de carga inicial (`#portalLoading`) en `index.html`/
   `project.html`, para no dejar la pantalla en blanco mientras
   `boot()` resuelve sesión + datos.
@@ -260,6 +286,20 @@ DOCUMENTACION/                      Historial completo: VISION, ALCANCE, ARQUITE
 - **Gate real de lectura por cliente diferido a v1.1**, decisión
   explícita — no aporta nada práctico con pocos clientes reales y
   requiere un estado "sin acceso" en el frontend que no existe hoy.
+- **Creación manual de cuenta como alternativa al email, no como
+  reemplazo** — el email de invitación depende de un servicio externo
+  (SMTP/deliverability) que consumía tiempo real de debugging en cada
+  cliente nuevo; se agregó `create_manual` (contraseña definida por el
+  admin, sin email) sin tocar ni retirar el flujo de invitación
+  existente. Mismo criterio para `set_password`: cambia la contraseña
+  de una cuenta ya creada sin borrarla/recrearla.
+- **Login genérico, no separado por rol** — el mismo modal
+  ("Iniciar sesión") sirve para admin y cliente; antes cualquier login
+  que no fuera de un admin se cerraba a la fuerza, lo cual no tenía
+  sentido una vez que se puede crear una cuenta de cliente sin email
+  (esa cuenta necesita alguna forma de loguearse). Ahora
+  `RSStore.getCurrentUserAccess()` decide destino: admin → panel;
+  cliente → su portal (`index.html?client=<slug>`).
 
 ## 7. Convenciones para trabajar con Claude Code
 
