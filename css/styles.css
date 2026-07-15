@@ -2142,3 +2142,35 @@ button {
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   }
 }
+
+/* ============================================================
+   CARGA INICIAL — overlay mostrado desde el HTML (sin esperar
+   JS) hasta que boot() termina de resolver sesión + datos, para
+   no dejar la pantalla en blanco durante ese tramo.
+   ============================================================ */
+.portal-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  background: var(--rs-background);
+  color: var(--rs-gray-500);
+  font-size: var(--rs-font-size-body);
+}
+
+.portal-loading__spinner {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 3px solid var(--rs-gray-100);
+  border-top-color: var(--rs-gray-500);
+  animation: portal-loading-spin 0.8s linear infinite;
+}
+
+@keyframes portal-loading-spin {
+  to { transform: rotate(360deg); }
+}

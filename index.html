@@ -21,6 +21,11 @@
 </head>
 <body>
 
+  <div id="portalLoading" class="portal-loading" aria-live="polite">
+    <span class="portal-loading__spinner"></span>
+    <span>Cargando portal…</span>
+  </div>
+
   <div id="announcement" class="announcement"></div>
 
   <header id="topbar" class="topbar"></header>
@@ -65,6 +70,8 @@
           RS.renderProjectGrid();
           RS.hydrateIcons();
           RSAdmin.init();
+          const loadingEl = document.getElementById("portalLoading");
+          if (loadingEl) loadingEl.remove();
         });
     }
     document.addEventListener("DOMContentLoaded", boot);

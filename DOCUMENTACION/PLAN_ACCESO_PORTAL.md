@@ -1,15 +1,16 @@
 # Plan — "Acceso al Portal" (gestión de clientes sin el dashboard de Supabase)
 
-Estado: **causa raíz real encontrada y corregida (2026-07-14, ver
-sección 6) — no era el email/SMTP, era un bug de sesión en el
-frontend.** UI simplificada el 2026-07-14 (ver
+Estado: **flujo completo cerrado y verificado end-to-end (2026-07-15)**
+— Crear acceso → email real vía Resend → login del cliente, confirmado
+con datos reales en `auth.users`/`clients`, no solo por el email
+recibido (ver sección 6 para el bug de sesión del 2026-07-14 y la
+sección 7 para la causa real del SMTP, ambos ya corregidos). UI
+simplificada el 2026-07-14 (ver
 [PLAN_REELSUPRA_OS.md](PLAN_REELSUPRA_OS.md) sección 3 — es la
 versión vigente de "Acceso al Portal", reemplaza la descripción de
-botones de la sección 2 de este documento). Pendiente: la prueba
-end-to-end final con el admin logueado correctamente (ver sección 6).
-El gate real de lectura por cliente (`06_client_access_gate.sql`)
-queda **diferido a v1.1**, decisión
-explícita — ver sección 4.
+botones de la sección 2 de este documento). El gate real de lectura
+por cliente (`06_client_access_gate.sql`) queda **diferido a v1.1**,
+decisión explícita — ver sección 4.
 
 ## 1. Por qué esta arquitectura
 
@@ -236,9 +237,44 @@ sobre `profiles`, confirmada) y se reseteó la fila de `clients` a
 'sin_invitar'` — estado limpio para una invitación de punta a punta
 real.
 
-**Pendiente — necesita al admin, no lo puedo hacer yo:** cerrar sesión
-en el navegador donde se usa el panel/Dashboard y volver a loguearse
-con la cuenta real de admin (para reemplazar la sesión de Juan que
-quedó guardada), y recién ahí probar "Crear acceso" de nuevo. Con el
-bug corregido, esa sesión vieja ya no debería activar el modo admin
-por error — pero conviene un login limpio para la prueba final.
+Con el bug corregido y una sesión limpia de admin, se repitió la
+prueba: seguía sin llegar el email. Eso llevó a la sección 7, que
+encontró la causa real y distinta.
+
+## 7. Causa raíz real del email no enviado — SMTP con Resend (2026-07-15)
+
+Con sesión de admin limpia confirmada (`profiles.role = 'admin'`,
+login real en incógnito) y el bug de la sección 6 ya corregido,
+"Crear acceso"/"Reenviar acceso" para Juan seguían sin mandar el
+email. Auditoría con logs reales de `auth_logs` (no supuesta):
+
+```
+"error": "535 \"Authentication credentials invalid\""
+"msg": "500: Error sending invite email"
+```
+
+**Causa real:** la API key de Resend cargada como contraseña SMTP en
+Supabase (Authentication → Emails → SMTP Settings) era inválida — un
+535 de SMTP es un rechazo de autenticación, no un problema de
+dominio/DKIM/SPF (esos ya estaban verificados) ni de código. GoTrue
+crea el usuario, falla al mandar el mail, y revierte la creación —
+por eso `auth.users` seguía sin el registro de Juan y `clients`
+seguía en `sin_invitar` pese a los intentos.
+
+**No fue código:** Edge Function, RLS y frontend hacían exactamente
+lo que debían; el error real volvía como 400 con el mensaje de
+GoTrue de fondo.
+
+**Corrección:** el admin regeneró la API key en Resend y la recargó
+en Supabase SMTP Settings.
+
+**Verificación end-to-end (2026-07-15), con datos reales, no solo
+"me llegó el email":**
+- `auth.users`: cuenta de Juan creada, `confirmed_at` y
+  `last_sign_in_at` con timestamp — ya inició sesión con éxito.
+- `profiles`: `role: client`, `client_id` apuntando a Juan Guzmán.
+- `clients`: `portal_access_status = 'invitado'`, `portal_user_id`
+  linkeado.
+
+Flujo **Crear acceso → Email → Login → Portal** cerrado de punta a
+punta. Sin pendientes en este documento.

@@ -3,6 +3,34 @@
 Registro cronológico de cambios, más granular que
 [VERSIONES.md](VERSIONES.md). Orden: más reciente arriba.
 
+## 2026-07-15 (Flujo de invitación cerrado; ajustes de UX finales)
+
+- Causa real de que "Crear/Reenviar acceso" no mandara email:
+  autenticación SMTP rechazada por Resend (`535 Authentication
+  credentials invalid`, visto en `auth_logs` reales, no supuesto) — la
+  API key cargada en Supabase no era válida. No era código: Edge
+  Function, RLS y frontend ya funcionaban bien. El admin regeneró la
+  API key en Resend y la recargó en Supabase; verificado con una
+  invitación real a Juan Guzmán: email recibido, cuenta creada,
+  `portal_access_status = "invitado"`, login confirmado en
+  `auth.users.last_sign_in_at`.
+- **Fix UX:** el botón "Admin" del topbar (`js/render.js`:
+  `renderTopbar()`) ya no aparece para una sesión de cliente logueada
+  (antes se mostraba igual, aunque el backend rechazara todo). Sigue
+  visible para admins reales y para visitantes anónimos (necesitan
+  poder loguearse). Nuevo flag `window.RS_HAS_SESSION`, seteado por
+  `detectAdminMode()` en `js/admin.js`.
+- **Fix UX:** agregado overlay de carga (`#portalLoading`,
+  `.portal-loading` en `css/styles.css`) en `index.html`/`project.html`
+  — visible desde el HTML estático (sin esperar JS) hasta que `boot()`
+  termina de resolver sesión + datos; antes la pantalla quedaba en
+  blanco durante ese tramo y daba sensación de que se había colgado.
+  No se tocó la arquitectura del boot ni la autenticación.
+- Verificado con Playwright: overlay presente al cargar y removido al
+  terminar boot() en ambas páginas; botón Admin oculto/visible según
+  `RS_HAS_SESSION`/`RS_ADMIN_MODE` simulados igual que los setea
+  `detectAdminMode()`; sin errores de consola.
+
 ## 2026-07-14 (Bug real encontrado: sesión de cliente activaba el modo admin)
 
 - Auditoría con logs reales (Edge Function) y consultas directas a

@@ -249,14 +249,22 @@ const RS = (() => {
       ? `<span class="admin-mode-badge">${icon("move")} ${showBack ? "Modo administrador — arrastrá los bloques para reordenar" : "Modo administrador activo"}</span>`
       : "";
 
+    // Un cliente logueado (role=client) no debe ver el botón Admin —
+    // solo lo ve un admin real o un visitante anónimo (que todavía lo
+    // necesita para poder loguearse).
+    const showAdminToggle = !window.RS_HAS_SESSION || isAdmin();
+    const adminToggleBtn = showAdminToggle
+      ? `<button class="admin-toggle" id="adminToggle" aria-label="Abrir modo administrador">
+          ${icon("settings")} Admin
+        </button>`
+      : "";
+
     el.innerHTML = `
       <div class="topbar__inner">
         ${left}
         <div class="topbar__actions">
           ${adminBadge}
-          <button class="admin-toggle" id="adminToggle" aria-label="Abrir modo administrador">
-            ${icon("settings")} Admin
-          </button>
+          ${adminToggleBtn}
         </div>
       </div>`;
   }

@@ -1277,6 +1277,11 @@
   // que window.prompt() (síncrono) devolviera algo.
   function detectAdminMode() {
     return RSStore.getSession().then((hasSession) => {
+      // Distinto de RS_ADMIN_MODE: esto marca "hay una sesión logueada"
+      // (aunque sea de un cliente), para que render.js pueda ocultar el
+      // botón Admin en ese caso sin afectar al visitante anónimo, que
+      // todavía necesita verlo para poder loguearse como admin.
+      window.RS_HAS_SESSION = hasSession;
       if (hasSession) {
         // Bug real encontrado 2026-07-14: getSession() solo dice "hay
         // sesión", no "es de un admin" — un cliente logueado (ej. tras
