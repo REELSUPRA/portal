@@ -401,13 +401,14 @@ window.RSStore = (() => {
       });
   }
 
-  // Invitar/reenviar/restaurar/revocar/cambiar email — todas pasan por
-  // la Edge Function (única pieza con la service_role key). No hay
-  // "no autorizado" silencioso: si la función devuelve ok:false, se
-  // propaga el motivo tal cual para mostrarlo en el toast.
-  function manageAccess(action, clientId, email) {
+  // Invitar/crear manualmente/reenviar/restaurar/revocar/cambiar email
+  // — todas pasan por la Edge Function (única pieza con la
+  // service_role key). No hay "no autorizado" silencioso: si la
+  // función devuelve ok:false, se propaga el motivo tal cual para
+  // mostrarlo en el toast. `password` solo aplica a "create_manual".
+  function manageAccess(action, clientId, email, password) {
     return client()
-      .functions.invoke("manage-client-access", { body: { action, clientId, email } })
+      .functions.invoke("manage-client-access", { body: { action, clientId, email, password } })
       .then(({ data, error }) => {
         if (error) throw error;
         if (!data || !data.ok) throw new Error((data && data.error) || "No se pudo completar la acción.");
@@ -415,9 +416,43 @@ window.RSStore = (() => {
       });
   }
 
+  // Para el login genérico (index.html/project.html): además de "es
+  // admin", un cliente logueado necesita saber A QUÉ portal entrar —
+  // no alcanza con "hay sesión", hace falta el slug de SU cliente.
+  function getCurrentUserAccess() {
+    return client()
+      .auth.getUser()
+      .then(({ data }) => {
+        if (!data || !data.user) return { role: null };
+        return client()
+          .from("profiles")
+          .select("role, client_id")
+          .eq("id", data.user.id)
+          .single()
+          .then(({ data: profile }) => {
+            if (!profile) return { role: null };
+            if (profile.role === "admin") return { role: "admin" };
+            if (profile.role === "client" && profile.client_id) {
+              return client()
+                .from("clients")
+                .select("slug")
+                .eq("id", profile.client_id)
+                .single()
+                .then(({ data: clientRow }) => ({
+                  role: "client",
+                  slug: clientRow ? clientRow.slug : null,
+                }));
+            }
+            return { role: profile.role || null };
+          })
+          .catch(() => ({ role: null }));
+      })
+      .catch(() => ({ role: null }));
+  }
+
   return {
     load, save, clear, hydrate,
-    signIn, signOut, getSession, isCurrentUserAdmin,
+    signIn, signOut, getSession, isCurrentUserAdmin, getCurrentUserAccess,
     listClients, listProjectsLight, createClient, createProject, manageAccess, uploadImage,
   };
 })();

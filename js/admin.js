@@ -123,7 +123,7 @@
     loginModalEl.className = "piece-modal-overlay";
     loginModalEl.innerHTML = `<div class="piece-modal">
       <div class="admin-panel__header">
-        <div class="admin-panel__title">${RS.icon("lock")} Acceso administrador</div>
+        <div class="admin-panel__title">${RS.icon("lock")} Iniciar sesión</div>
         <button class="admin-panel__close" id="loginModalClose">${RS.icon("x")}</button>
       </div>
       <div class="admin-panel__body">
@@ -146,12 +146,18 @@
       if (!email || !password) return;
       RSStore.signIn(email, password).then((ok) => {
         if (!ok) { showToast("Email o contraseña incorrectos", "error"); return; }
-        // Login correcto no alcanza: si la cuenta es de un cliente
-        // (profiles.role='client'), no debe activar el modo admin —
-        // se cierra esa sesión de nuevo en vez de dejarla "a medias".
-        RSStore.isCurrentUserAdmin().then((isAdmin) => {
-          if (isAdmin) { closeLoginModal(true); return; }
-          RSStore.signOut().then(() => showToast("Esta cuenta no tiene permisos de administrador", "error"));
+        // Login genérico: admin activa el panel; cliente va directo a
+        // SU portal (no alcanza con "hay sesión", hace falta saber a
+        // qué cliente pertenece). Cualquier otra cosa (sin profile,
+        // sin client_id) cierra la sesión — no queda "a medias".
+        RSStore.getCurrentUserAccess().then((access) => {
+          if (access.role === "admin") { closeLoginModal(true); return; }
+          if (access.role === "client" && access.slug) {
+            closeLoginModal(false);
+            window.location.href = `index.html?client=${encodeURIComponent(access.slug)}`;
+            return;
+          }
+          RSStore.signOut().then(() => showToast("Esta cuenta no tiene acceso configurado", "error"));
         });
       });
     };
@@ -686,11 +692,21 @@
   // pensar. Reutilizada tal cual desde el Dashboard (window.RSAdmin).
   // No toca CLIENT_DATA ni pasa por markDirty/saveChanges — no es un
   // cambio "sin guardar", ya queda confirmado apenas la acción responde.
+  function generateTempPassword() {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+    const arr = new Uint32Array(12);
+    crypto.getRandomValues(arr);
+    let out = "";
+    for (let i = 0; i < arr.length; i++) out += chars[arr[i] % chars.length];
+    return out;
+  }
+
   function buildPortalAccessSection(data, onChange) {
     const wrap = document.createElement("div");
     wrap.style.marginBottom = "var(--space-4)";
 
     let pendingEmail = data.client.portalEmail || "";
+    let pendingPassword = "";
     let editingEmail = false;
 
     const emailWrap = document.createElement("div");
@@ -704,6 +720,35 @@
     emailInput.addEventListener("input", (e) => { pendingEmail = e.target.value; });
     emailWrap.appendChild(emailInput);
     wrap.appendChild(emailWrap);
+
+    // Solo se muestra para una cuenta nueva (nunca invitada/creada
+    // antes) — el admin define la contraseña temporal acá mismo, sin
+    // depender de que llegue un email. Se la pasa al cliente por
+    // fuera (WhatsApp, etc.).
+    const passwordWrap = document.createElement("div");
+    passwordWrap.className = "admin-field";
+    const passwordLabel = document.createElement("label");
+    passwordLabel.textContent = "Contraseña temporal";
+    passwordWrap.appendChild(passwordLabel);
+    const passwordRow = document.createElement("div");
+    passwordRow.style.cssText = "display:flex; gap:var(--space-2);";
+    const passwordInput = document.createElement("input");
+    passwordInput.type = "text";
+    passwordInput.autocomplete = "off";
+    passwordInput.spellcheck = false;
+    passwordInput.style.flex = "1";
+    passwordInput.addEventListener("input", (e) => { pendingPassword = e.target.value; });
+    const generateBtn = document.createElement("button");
+    generateBtn.type = "button";
+    generateBtn.className = "btn btn--ghost";
+    generateBtn.textContent = "Generar";
+    generateBtn.addEventListener("click", () => {
+      pendingPassword = generateTempPassword();
+      passwordInput.value = pendingPassword;
+    });
+    passwordRow.appendChild(passwordInput);
+    passwordRow.appendChild(generateBtn);
+    passwordWrap.appendChild(passwordRow);
 
     const actionsRow = document.createElement("div");
     actionsRow.style.cssText = "display:flex; flex-wrap:wrap; gap:var(--space-2);";
@@ -737,6 +782,31 @@
         });
     }
 
+    // Distinto de runAccessAction: crea la cuenta con contraseña
+    // definida a mano (sin email) y muestra esa contraseña una sola
+    // vez, de forma persistente (window.alert, no un toast que
+    // desaparece solo) para que el admin la copie y se la pase al
+    // cliente por otro canal.
+    function runManualCreate(email, password) {
+      return RSStore.manageAccess("create_manual", data.client._id, email, password)
+        .then((res) => {
+          data.client.portalEmail = res.portalEmail;
+          data.client.portalAccessStatus = res.portalAccessStatus;
+          pendingEmail = res.portalEmail || "";
+          pendingPassword = "";
+          editingEmail = false;
+          render();
+          if (onChange) onChange();
+          window.alert(
+            `Acceso creado.\n\nEmail: ${res.portalEmail}\nContraseña temporal: ${password}\n\n` +
+            `Compartísela al cliente por un canal seguro (WhatsApp, etc.) — no vuelve a mostrarse después de cerrar este mensaje.`
+          );
+        })
+        .catch((e) => {
+          showToast(e.message || "No se pudo completar la acción", "error");
+        });
+    }
+
     function render() {
       actionsRow.innerHTML = "";
       const status = data.client.portalAccessStatus;
@@ -750,14 +820,35 @@
       emailInput.classList.toggle("admin-field__input--locked", emailInput.readOnly);
 
       if (!hasAccess) {
-        actionsRow.appendChild(
-          actionBtn(`${RS.icon("send")} Crear acceso`, () => {
-            if (!pendingEmail) { showToast("Ingresá un email primero", "error"); return Promise.resolve(); }
-            return runAccessAction(hasAccount ? "grant" : "invite", pendingEmail);
-          }, "primary")
-        );
+        if (!hasAccount) {
+          // Cuenta nueva: hace falta definir la contraseña temporal.
+          if (!passwordWrap.isConnected) wrap.insertBefore(passwordWrap, actionsRow);
+          passwordInput.value = pendingPassword;
+          actionsRow.appendChild(
+            actionBtn(`${RS.icon("send")} Crear acceso`, () => {
+              if (!pendingEmail) { showToast("Ingresá un email primero", "error"); return Promise.resolve(); }
+              if (!pendingPassword || pendingPassword.length < 8) {
+                showToast("Ingresá o generá una contraseña de al menos 8 caracteres", "error");
+                return Promise.resolve();
+              }
+              return runManualCreate(pendingEmail, pendingPassword);
+            }, "primary")
+          );
+        } else {
+          // Acceso revocado antes: la cuenta ya existe con su
+          // contraseña original, no hace falta pedir una nueva.
+          if (passwordWrap.isConnected) passwordWrap.remove();
+          actionsRow.appendChild(
+            actionBtn(`${RS.icon("send")} Crear acceso`, () => {
+              if (!pendingEmail) { showToast("Ingresá un email primero", "error"); return Promise.resolve(); }
+              return runAccessAction("grant", pendingEmail);
+            }, "primary")
+          );
+        }
         return;
       }
+
+      if (passwordWrap.isConnected) passwordWrap.remove();
 
       if (editingEmail) {
         actionsRow.appendChild(

@@ -3,6 +3,43 @@
 Registro cronológico de cambios, más granular que
 [VERSIONES.md](VERSIONES.md). Orden: más reciente arriba.
 
+## 2026-07-15 (Creación manual de acceso — reemplaza la dependencia del email)
+
+- Pedido explícito: dejar de depender del email de invitación (fuente
+  recurrente de tiempo perdido en debugging de SMTP/deliverability) y
+  poder crear la cuenta de un cliente 100% desde el panel, con
+  contraseña temporal definida por el admin.
+- Edge Function `manage-client-access`: nueva acción `create_manual`
+  (`auth.admin.createUser({ email, password, email_confirm: true })`
+  en vez de `inviteUserByEmail`) — cuenta lista para loguearse de
+  inmediato, sin depender de que llegue un email. Desplegada.
+- Panel admin (`buildPortalAccessSection`): para una cuenta nueva (sin
+  `portal_user_id`), "Crear acceso" ahora pide también una contraseña
+  temporal (con botón "Generar"); al crearla, un `window.alert` muestra
+  el email + contraseña una sola vez para que el admin se la pase al
+  cliente por otro canal. Un cliente antes revocado (con cuenta ya
+  existente) sigue usando "grant" — no pide contraseña nueva.
+- Login genérico (`ensureLoginModal`, ahora titulado "Iniciar sesión"
+  en vez de "Acceso administrador"): ya no cierra la sesión de un
+  cliente válido — un admin activa el panel; un cliente (`role:
+  client`) es redirigido directo a `index.html?client=<su-slug>` (`
+  RSStore.getCurrentUserAccess()`, nuevo). El botón del topbar dice
+  "Iniciar sesión" para admin/anónimo sin sesión, "Admin" para un
+  admin ya logueado — mismo botón, mismo criterio de visibilidad que
+  ya existía (oculto para clientes logueados).
+- No se tocó el flujo de invitación por email existente (`invite`/
+  `resend`/`grant`/`revoke`/`change_email`) — sigue disponible para
+  cuentas ya invitadas por ese camino; el email deja de ser el único
+  camino para cuentas nuevas, no se retira código de las anteriores.
+- Verificado: sintaxis de los 3 archivos JS + type-check de la Edge
+  Function (Deno), Playwright contra los 3 estados de "Acceso al
+  Portal" (nueva/con acceso/revocada) y el label del botón/título del
+  modal según sesión, sin errores de consola. Function redesplegada y
+  confirmada respondiendo en producción (gate de auth intacto).
+  Pendiente: una prueba real de punta a punta (crear acceso manual →
+  login del cliente) — requiere el login real del admin, que solo él
+  puede hacer.
+
 ## 2026-07-15 (Flujo de invitación cerrado; ajustes de UX finales)
 
 - Causa real de que "Crear/Reenviar acceso" no mandara email:

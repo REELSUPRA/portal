@@ -13,6 +13,10 @@
 // Acciones (body: { action, clientId, email? }):
 //   - "invite"       — primera vez. Crea la cuenta (Supabase manda el
 //                      email de invitación), guarda portal_user_id.
+//   - "create_manual" — primera vez, sin depender del email: el admin
+//                      define email + contraseña temporal a mano. La
+//                      cuenta queda confirmada y lista para loguearse
+//                      de inmediato (sin flujo de invitación).
 //   - "resend"       — reenvía la invitación a portal_email.
 //   - "grant"        — restaura el acceso de alguien ya invitado antes
 //                      (portal_user_id existente) sin mandar invitación
@@ -72,7 +76,7 @@ Deno.serve(async (req) => {
     // llama es admin.
     const adminClient = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
-    const { action, clientId, email } = await req.json();
+    const { action, clientId, email, password } = await req.json();
     if (!clientId) return json({ ok: false, error: "Falta clientId" }, 400);
 
     const { data: clientRow, error: clientErr } = await adminClient
@@ -94,6 +98,30 @@ Deno.serve(async (req) => {
       await adminClient
         .from("clients")
         .update({ portal_email: email, portal_user_id: invited.user.id, portal_access_status: "invitado" })
+        .eq("id", clientId);
+
+      return json({ ok: true, portalEmail: email, portalAccessStatus: "invitado" });
+    }
+
+    if (action === "create_manual") {
+      if (!email) return json({ ok: false, error: "Falta email" }, 400);
+      if (!password || password.length < 8) {
+        return json({ ok: false, error: "La contraseña debe tener al menos 8 caracteres" }, 400);
+      }
+      if (clientRow.portal_user_id) {
+        return json({ ok: false, error: "Este cliente ya tiene una cuenta — usá Reenviar o Restaurar acceso." }, 400);
+      }
+      const { data: created, error: createErr } = await adminClient.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+      });
+      if (createErr) return json({ ok: false, error: createErr.message }, 400);
+
+      await adminClient.from("profiles").upsert({ id: created.user.id, role: "client", client_id: clientId });
+      await adminClient
+        .from("clients")
+        .update({ portal_email: email, portal_user_id: created.user.id, portal_access_status: "invitado" })
         .eq("id", clientId);
 
       return json({ ok: true, portalEmail: email, portalAccessStatus: "invitado" });

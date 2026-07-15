@@ -253,9 +253,12 @@ const RS = (() => {
     // solo lo ve un admin real o un visitante anónimo (que todavía lo
     // necesita para poder loguearse).
     const showAdminToggle = !window.RS_HAS_SESSION || isAdmin();
+    // Anónimo: botón genérico de login (también sirve para que un
+    // cliente recién creado manualmente entre a su portal). Admin ya
+    // logueado: mismo botón abre el panel, por eso conserva su label.
     const adminToggleBtn = showAdminToggle
-      ? `<button class="admin-toggle" id="adminToggle" aria-label="Abrir modo administrador">
-          ${icon("settings")} Admin
+      ? `<button class="admin-toggle" id="adminToggle" aria-label="${isAdmin() ? "Abrir panel de administrador" : "Iniciar sesión"}">
+          ${icon(isAdmin() ? "settings" : "log-in")} ${isAdmin() ? "Admin" : "Iniciar sesión"}
         </button>`
       : "";
 
