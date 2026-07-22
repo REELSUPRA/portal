@@ -48,7 +48,7 @@
 
 (function () {
 
-  let panelEl, overlayEl, toastEl, pieceModalEl, imageModalEl, saveBarEl;
+  let panelEl, overlayEl, toastEl, pieceModalEl, imageModalEl, saveBarEl, clientFormModalEl;
   let isBuilt = false;
   let draggedBlockId = null;
   let imageModalConfig = null;
@@ -214,7 +214,7 @@
 
   function refreshPage() {
     RS.renderTopbar({ showBack: !!document.getElementById("projectHero") });
-    if (document.getElementById("hero")) { RS.renderHero(); RS.renderProjectGrid(); }
+    if (document.getElementById("hero")) { RS.renderHero(); RS.renderRecentActivity(); RS.renderProjectGrid(); }
     if (document.getElementById("projectHero")) RS.renderProjectDetail();
     RS.renderAnnouncement();
     RS.hydrateIcons();
@@ -1114,6 +1114,13 @@
       RS.navigateCalendar(val === "today" ? "today" : parseInt(val, 10));
       bindProjectPageEvents();
     });
+
+    // "Ver historial completo" de la bitácora (funciona con o sin
+    // admin — es una vista de solo lectura, ver Fase 2 Parte D).
+    container.addEventListener("click", (e) => {
+      if (!e.target.closest("[data-bitacora-history]")) return;
+      openBitacoraHistoryModal(currentProject());
+    });
   }
 
   function reorderBlocks(draggedId, targetId) {
@@ -1202,6 +1209,43 @@
 
   function closePieceModal() {
     if (pieceModalEl) pieceModalEl.classList.remove("is-open");
+  }
+
+  /* ---------------------------------------------------------- */
+  /* Modal de solo lectura: historial completo de la bitácora     */
+  /* (Fase 2, Parte D) — blockBitacora() solo muestra las últimas  */
+  /* novedades; acá se ve el timeline entero, sin nada editable.   */
+  /* ---------------------------------------------------------- */
+
+  let bitacoraHistoryModalEl = null;
+
+  function ensureBitacoraHistoryModal() {
+    if (bitacoraHistoryModalEl) return;
+    bitacoraHistoryModalEl = document.createElement("div");
+    bitacoraHistoryModalEl.className = "piece-modal-overlay";
+    bitacoraHistoryModalEl.innerHTML = `<div class="piece-modal">
+      <div class="admin-panel__header">
+        <div class="admin-panel__title">${RS.icon("history")} Historial completo</div>
+        <button class="admin-panel__close" id="bitacoraHistoryModalClose">${RS.icon("x")}</button>
+      </div>
+      <div class="admin-panel__body" id="bitacoraHistoryModalBody"></div>
+    </div>`;
+    document.body.appendChild(bitacoraHistoryModalEl);
+    bitacoraHistoryModalEl.addEventListener("click", (e) => { if (e.target === bitacoraHistoryModalEl) closeBitacoraHistoryModal(); });
+    bitacoraHistoryModalEl.querySelector("#bitacoraHistoryModalClose").addEventListener("click", closeBitacoraHistoryModal);
+  }
+
+  function closeBitacoraHistoryModal() {
+    if (bitacoraHistoryModalEl) bitacoraHistoryModalEl.classList.remove("is-open");
+  }
+
+  function openBitacoraHistoryModal(project) {
+    if (!project) return;
+    ensureBitacoraHistoryModal();
+    const entries = RS.bitacoraEntries(project);
+    bitacoraHistoryModalEl.querySelector("#bitacoraHistoryModalBody").innerHTML = RS.bitacoraTimelineHtml(entries);
+    bitacoraHistoryModalEl.classList.add("is-open");
+    RS.hydrateIcons();
   }
 
   /* ---------------------------------------------------------- */
@@ -1328,6 +1372,192 @@
     });
   }
 
+  /* ---------------------------------------------------------- */
+  /* Modal liviano de cliente (Dashboard, Fase 2): crear/editar   */
+  /* nombre, slug y emoji de saludo — reemplaza los window.prompt()  */
+  /* encadenados. Todo lo visual/de contenido (tema, portada, logo, */
+  /* bloques) se sigue editando desde el panel admin del cliente,   */
+  /* no acá.                                                        */
+  /* ---------------------------------------------------------- */
+
+  function slugifyClientName(text) {
+    return (text || "")
+      .toString()
+      .normalize("NFD").replace(/[̀-ͯ]/g, "")
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
+  }
+
+  function friendlyClientFormError(e) {
+    if (e && e.code === "23505") return "Ese slug ya existe — probá con otro.";
+    return (e && e.message) || "No se pudo completar la acción";
+  }
+
+  function ensureClientFormModal() {
+    if (clientFormModalEl) return;
+    clientFormModalEl = document.createElement("div");
+    clientFormModalEl.className = "piece-modal-overlay";
+    clientFormModalEl.innerHTML = `<div class="piece-modal">
+      <div class="admin-panel__header">
+        <div class="admin-panel__title" id="clientFormModalTitle"></div>
+        <button class="admin-panel__close" id="clientFormModalClose">${RS.icon("x")}</button>
+      </div>
+      <div class="admin-panel__body">
+        <div class="admin-field">
+          <label>Nombre</label>
+          <input type="text" id="clientFormNameInput" />
+        </div>
+        <div class="admin-field">
+          <label>Slug (para la URL)</label>
+          <input type="text" id="clientFormSlugInput" autocomplete="off" spellcheck="false" />
+        </div>
+        <div class="admin-field">
+          <label>Emoji de saludo (opcional)</label>
+          <input type="text" id="clientFormEmojiInput" maxlength="4" placeholder="👋" />
+        </div>
+        <button class="btn btn--primary" id="clientFormSubmitBtn" style="width:100%; justify-content:center;"></button>
+      </div>
+    </div>`;
+    document.body.appendChild(clientFormModalEl);
+    clientFormModalEl.addEventListener("click", (e) => { if (e.target === clientFormModalEl) closeClientFormModal(); });
+    clientFormModalEl.querySelector("#clientFormModalClose").addEventListener("click", closeClientFormModal);
+  }
+
+  function closeClientFormModal() {
+    if (clientFormModalEl) clientFormModalEl.classList.remove("is-open");
+  }
+
+  // config: { mode: "create"|"edit", client: {_id, name, slug, greetingEmoji} (solo "edit"), onSaved }
+  function openClientFormModal(config) {
+    ensureClientFormModal();
+    const isEdit = config.mode === "edit";
+    const nameInput = clientFormModalEl.querySelector("#clientFormNameInput");
+    const slugInput = clientFormModalEl.querySelector("#clientFormSlugInput");
+    const emojiInput = clientFormModalEl.querySelector("#clientFormEmojiInput");
+    const submitBtn = clientFormModalEl.querySelector("#clientFormSubmitBtn");
+    const titleEl = clientFormModalEl.querySelector("#clientFormModalTitle");
+
+    nameInput.value = (isEdit && config.client.name) || "";
+    slugInput.value = (isEdit && config.client.slug) || "";
+    emojiInput.value = (isEdit && config.client.greetingEmoji) || "";
+    titleEl.innerHTML = isEdit
+      ? `${RS.icon("pencil")} Editar cliente`
+      : `${RS.icon("user-plus")} Nuevo cliente`;
+    submitBtn.innerHTML = isEdit ? `${RS.icon("check")} Guardar` : `${RS.icon("plus")} Crear cliente`;
+
+    // Autogenera el slug a partir del nombre mientras el admin no haya
+    // tocado el campo de slug a mano — igual que createClientFlow()
+    // hacía con los dos window.prompt() encadenados.
+    let slugTouched = isEdit;
+    slugInput.oninput = () => { slugTouched = true; };
+    nameInput.oninput = () => {
+      if (!slugTouched) slugInput.value = slugifyClientName(nameInput.value);
+    };
+
+    submitBtn.onclick = () => {
+      const name = nameInput.value.trim();
+      const slug = slugifyClientName(slugInput.value.trim());
+      const greetingEmoji = emojiInput.value.trim();
+      if (!name) { showToast("Ingresá un nombre", "error"); return; }
+      if (!slug) { showToast("Ingresá un slug", "error"); return; }
+      submitBtn.disabled = true;
+      const action = isEdit
+        ? RSStore.updateClientBasic(config.client._id, { name, slug, greeting_emoji: greetingEmoji })
+        : RSStore.createClient({ name, slug });
+      action
+        .then((result) => {
+          closeClientFormModal();
+          showToast(isEdit ? "Cliente actualizado" : "Cliente creado");
+          if (config.onSaved) config.onSaved(result);
+        })
+        .catch((e) => showToast(friendlyClientFormError(e), "error"))
+        .finally(() => { submitBtn.disabled = false; });
+    };
+
+    clientFormModalEl.classList.add("is-open");
+    RS.hydrateIcons();
+  }
+
+  /* ---------------------------------------------------------- */
+  /* Modal liviano de proyecto (Dashboard, Fase 2): crear un      */
+  /* proyecto nuevo para un cliente — mismo componente/patrón que */
+  /* el modal de cliente, reemplaza los window.prompt() encadenados. */
+  /* Editar un proyecto existente se sigue haciendo desde su propio  */
+  /* panel admin (project.html?admin=true), no acá.                */
+  /* ---------------------------------------------------------- */
+
+  let projectFormModalEl = null;
+
+  function ensureProjectFormModal() {
+    if (projectFormModalEl) return;
+    projectFormModalEl = document.createElement("div");
+    projectFormModalEl.className = "piece-modal-overlay";
+    projectFormModalEl.innerHTML = `<div class="piece-modal">
+      <div class="admin-panel__header">
+        <div class="admin-panel__title" id="projectFormModalTitle"></div>
+        <button class="admin-panel__close" id="projectFormModalClose">${RS.icon("x")}</button>
+      </div>
+      <div class="admin-panel__body">
+        <div class="admin-field">
+          <label>Nombre del proyecto</label>
+          <input type="text" id="projectFormNameInput" />
+        </div>
+        <div class="admin-field">
+          <label>Slug (para la URL)</label>
+          <input type="text" id="projectFormSlugInput" autocomplete="off" spellcheck="false" />
+        </div>
+        <button class="btn btn--primary" id="projectFormSubmitBtn" style="width:100%; justify-content:center;">${RS.icon("plus")} Crear proyecto</button>
+      </div>
+    </div>`;
+    document.body.appendChild(projectFormModalEl);
+    projectFormModalEl.addEventListener("click", (e) => { if (e.target === projectFormModalEl) closeProjectFormModal(); });
+    projectFormModalEl.querySelector("#projectFormModalClose").addEventListener("click", closeProjectFormModal);
+  }
+
+  function closeProjectFormModal() {
+    if (projectFormModalEl) projectFormModalEl.classList.remove("is-open");
+  }
+
+  // config: { clientId, clientName, onSaved }
+  function openProjectFormModal(config) {
+    ensureProjectFormModal();
+    const nameInput = projectFormModalEl.querySelector("#projectFormNameInput");
+    const slugInput = projectFormModalEl.querySelector("#projectFormSlugInput");
+    const submitBtn = projectFormModalEl.querySelector("#projectFormSubmitBtn");
+    const titleEl = projectFormModalEl.querySelector("#projectFormModalTitle");
+
+    nameInput.value = "";
+    slugInput.value = "";
+    titleEl.innerHTML = `${RS.icon("folder-plus")} Nuevo proyecto para ${config.clientName}`;
+
+    let slugTouched = false;
+    slugInput.oninput = () => { slugTouched = true; };
+    nameInput.oninput = () => {
+      if (!slugTouched) slugInput.value = slugifyClientName(nameInput.value);
+    };
+
+    submitBtn.onclick = () => {
+      const name = nameInput.value.trim();
+      const slug = slugifyClientName(slugInput.value.trim());
+      if (!name) { showToast("Ingresá un nombre", "error"); return; }
+      if (!slug) { showToast("Ingresá un slug", "error"); return; }
+      submitBtn.disabled = true;
+      RSStore.createProject(config.clientId, { name, slug })
+        .then((result) => {
+          closeProjectFormModal();
+          showToast("Proyecto creado");
+          if (config.onSaved) config.onSaved(result);
+        })
+        .catch((e) => showToast(friendlyClientFormError(e), "error"))
+        .finally(() => { submitBtn.disabled = false; });
+    };
+
+    projectFormModalEl.classList.add("is-open");
+    RS.hydrateIcons();
+  }
+
   function openClientLogoModal() {
     openImageModal({
       title: "Logo del cliente",
@@ -1417,6 +1647,16 @@
   // Devuelve una Promise — boot() (index.html/project.html) espera a
   // que resuelva antes de dibujar nada, igual que antes esperaba a
   // que window.prompt() (síncrono) devolviera algo.
+  // ?preview=1: "Vista previa" desde el Dashboard — un admin entra al
+  // portal de un cliente para ver EXACTAMENTE lo que ve el cliente, sin
+  // activar el panel admin, aunque su sesión real sea de admin. Se
+  // resuelve antes que nada más porque, a diferencia de wantsAdminViaUrl(),
+  // esto tiene que GANARLE a una sesión admin ya activa (que si no,
+  // activaría el panel igual — ver comentario de detectAdminMode()).
+  function wantsPreviewViaUrl() {
+    return new URLSearchParams(window.location.search).get("preview") === "1";
+  }
+
   function detectAdminMode() {
     return RSStore.getSession().then((hasSession) => {
       // Distinto de RS_ADMIN_MODE: esto marca "hay una sesión logueada"
@@ -1424,6 +1664,15 @@
       // botón Admin en ese caso sin afectar al visitante anónimo, que
       // todavía necesita verlo para poder loguearse como admin.
       window.RS_HAS_SESSION = hasSession;
+      if (wantsPreviewViaUrl()) {
+        setAdminMode(false);
+        // El banner de "vista previa" solo tiene sentido para un admin
+        // real (link enviado desde el Dashboard); si un cliente llegara
+        // a tener ?preview=1 en su URL, no debe verse el banner ni el
+        // link "Volver al Dashboard" (esa página no es para él).
+        if (!hasSession) { window.RS_PREVIEW_MODE = false; return; }
+        return RSStore.isCurrentUserAdmin().then((isAdmin) => { window.RS_PREVIEW_MODE = isAdmin; });
+      }
       if (hasSession) {
         // Bug real encontrado 2026-07-14: getSession() solo dice "hay
         // sesión", no "es de un admin" — un cliente logueado (ej. tras
@@ -1440,5 +1689,5 @@
   // además para que dashboard.js los reutilice tal cual — el Dashboard
   // no reimplementa el login ni "Acceso al Portal", los toma prestados
   // de acá (única fuente de verdad para ambos).
-  window.RSAdmin = { init, toggleAdminMode, detectAdminMode, buildPortalAccessSection, tryActivateAdmin, showToast };
+  window.RSAdmin = { init, toggleAdminMode, detectAdminMode, buildPortalAccessSection, tryActivateAdmin, showToast, openClientFormModal, openProjectFormModal };
 })();

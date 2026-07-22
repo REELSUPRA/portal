@@ -5,24 +5,29 @@
  * No es un editor de contenido nuevo: lista clientes/proyectos y deja
  * "Entrar" al editor de siempre (index.html/project.html?admin=true).
  * Reutiliza RSStore (datos), RS (íconos) y RSAdmin (login, toasts,
- * Acceso al Portal) tal cual — cero lógica de admin duplicada acá.
+ * Acceso al Portal, modales de cliente/proyecto) tal cual — cero
+ * lógica de admin duplicada acá.
+ *
+ * Fase 2: además de listar y crear, permite buscar, editar (nombre/
+ * slug/emoji), archivar/restaurar (solo oculta de esta lista — ver
+ * supabase/07_client_archive.sql) y entrar en "Vista previa" (ver el
+ * portal exactamente como lo ve el cliente, sin activar el panel
+ * admin — ver detectAdminMode() en js/admin.js).
  * ============================================================
  */
 
 (() => {
-  function slugify(text) {
-    return (text || "")
-      .toString()
-      .normalize("NFD").replace(/[̀-ͯ]/g, "")
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-|-$)/g, "");
-  }
-
   const gateEl = document.getElementById("loginGate");
   const appEl = document.getElementById("app");
   const listEl = document.getElementById("clientList");
+  const searchInput = document.getElementById("clientSearchInput");
+  const showArchivedToggle = document.getElementById("showArchivedToggle");
+
+  // Clientes/proyectos ya traídos de Supabase — buscar y "Ver
+  // archivados" filtran sobre esto en memoria, sin ida y vuelta al
+  // backend por cada tecla.
+  let allClients = [];
+  let allProjects = [];
 
   function showGate() {
     gateEl.style.display = "flex";
@@ -42,32 +47,41 @@
     });
   }
 
-  // Slug duplicado (23505 = unique_violation en Postgres) es el único
-  // error esperable en uso normal — el resto de errores no correspondía
-  // adivinarlos, se muestra el mensaje real.
-  function friendlyCreateError(e) {
-    if (e && e.code === "23505") return "Ese slug ya existe — probá con otro.";
-    return (e && e.message) || "No se pudo completar la acción";
+  function createClientFlow() {
+    RSAdmin.openClientFormModal({
+      mode: "create",
+      onSaved: () => loadDashboard(),
+    });
   }
 
-  function createClientFlow() {
-    const name = window.prompt("Nombre del cliente nuevo:");
-    if (!name) return;
-    const slug = window.prompt("Slug para la URL (sin espacios ni acentos):", slugify(name));
-    if (!slug) return;
-    RSStore.createClient({ name, slug: slugify(slug) })
-      .then(() => { RSAdmin.showToast("Cliente creado"); loadDashboard(); })
-      .catch((e) => RSAdmin.showToast(friendlyCreateError(e), "error"));
+  function editClientFlow(clientRow) {
+    RSAdmin.openClientFormModal({
+      mode: "edit",
+      client: { _id: clientRow.id, name: clientRow.name, slug: clientRow.slug, greetingEmoji: clientRow.greeting_emoji },
+      onSaved: () => loadDashboard(),
+    });
   }
 
   function createProjectFlow(clientId, clientName) {
-    const name = window.prompt(`Nombre del proyecto nuevo para ${clientName}:`);
-    if (!name) return;
-    const slug = window.prompt("Slug para la URL (sin espacios ni acentos):", slugify(name));
-    if (!slug) return;
-    RSStore.createProject(clientId, { name, slug: slugify(slug) })
-      .then(() => { RSAdmin.showToast("Proyecto creado"); loadDashboard(); })
-      .catch((e) => RSAdmin.showToast(friendlyCreateError(e), "error"));
+    RSAdmin.openProjectFormModal({
+      clientId,
+      clientName,
+      onSaved: () => loadDashboard(),
+    });
+  }
+
+  function toggleArchivedFlow(clientRow) {
+    const nextArchived = !clientRow.archived;
+    const confirmMsg = nextArchived
+      ? `¿Archivar "${clientRow.name}"? Se oculta de esta lista (con "Ver archivados" se puede recuperar); el portal del cliente sigue funcionando igual que hoy.`
+      : `¿Restaurar "${clientRow.name}" a la lista activa?`;
+    if (!window.confirm(confirmMsg)) return;
+    RSStore.setClientArchived(clientRow.id, nextArchived)
+      .then(() => {
+        RSAdmin.showToast(nextArchived ? "Cliente archivado" : "Cliente restaurado");
+        loadDashboard();
+      })
+      .catch((e) => RSAdmin.showToast(e.message || "No se pudo completar la acción", "error"));
   }
 
   // buildPortalAccessSection() espera el mismo shape camelCase que usa
@@ -87,13 +101,23 @@
 
   function renderClientCard(clientRow, projects) {
     const card = document.createElement("div");
-    card.className = "dashboard-card";
+    card.className = "dashboard-card" + (clientRow.archived ? " dashboard-card--archived" : "");
 
     const header = document.createElement("div");
     header.className = "dashboard-card__header";
     header.innerHTML = `
-      <div class="dashboard-card__title">${clientRow.name}</div>
-      <a class="btn btn--ghost" href="index.html?client=${encodeURIComponent(clientRow.slug)}&admin=true">${RS.icon("arrow-right")} Entrar</a>`;
+      <div class="dashboard-card__title">
+        ${clientRow.name}
+        ${clientRow.archived ? `<span class="dashboard-badge dashboard-badge--archived">Archivado</span>` : ""}
+      </div>
+      <div class="dashboard-card__actions">
+        <button class="btn btn--ghost btn--sm" data-action="edit">${RS.icon("pencil")} Editar</button>
+        <a class="btn btn--ghost btn--sm" href="index.html?client=${encodeURIComponent(clientRow.slug)}&preview=1">${RS.icon("eye")} Vista previa</a>
+        <a class="btn btn--ghost btn--sm" href="index.html?client=${encodeURIComponent(clientRow.slug)}&admin=true">${RS.icon("arrow-right")} Entrar</a>
+        <button class="btn btn--ghost btn--sm" data-action="archive">${clientRow.archived ? RS.icon("rotate-ccw") + " Restaurar" : RS.icon("archive") + " Archivar"}</button>
+      </div>`;
+    header.querySelector('[data-action="edit"]').addEventListener("click", () => editClientFlow(clientRow));
+    header.querySelector('[data-action="archive"]').addEventListener("click", () => toggleArchivedFlow(clientRow));
     card.appendChild(header);
 
     card.appendChild(RSAdmin.buildPortalAccessSection(toAccessData(clientRow), loadDashboard));
@@ -103,7 +127,7 @@
     projects.forEach((p) => {
       const row = document.createElement("a");
       row.className = "dashboard-project-row";
-      row.href = `project.html?project=${encodeURIComponent(p.slug)}&admin=true`;
+      row.href = `project.html?id=${encodeURIComponent(p.slug)}&admin=true`;
       row.textContent = p.name;
       projectsWrap.appendChild(row);
     });
@@ -118,20 +142,41 @@
     return card;
   }
 
+  // Filtra allClients por texto de búsqueda + toggle de archivados, y
+  // vuelve a pintar la lista — no golpea el backend de nuevo.
+  function renderFilteredList() {
+    const query = (searchInput.value || "").trim().toLowerCase();
+    const showArchived = showArchivedToggle.checked;
+
+    const visible = allClients.filter((c) => {
+      if (!showArchived && c.archived) return false;
+      if (!query) return true;
+      return c.name.toLowerCase().includes(query) || c.slug.toLowerCase().includes(query);
+    });
+
+    listEl.innerHTML = "";
+    if (!allClients.length) {
+      listEl.innerHTML = `<p class="dashboard-loading">Todavía no hay clientes — creá el primero con "Nuevo cliente".</p>`;
+      return;
+    }
+    if (!visible.length) {
+      listEl.innerHTML = `<p class="dashboard-loading">Ningún cliente coincide con la búsqueda.</p>`;
+      return;
+    }
+    visible.forEach((c) => {
+      const ownProjects = allProjects.filter((p) => p.client_id === c.id);
+      listEl.appendChild(renderClientCard(c, ownProjects));
+    });
+    RS.hydrateIcons();
+  }
+
   function loadDashboard() {
     listEl.innerHTML = `<p class="dashboard-loading">Cargando…</p>`;
     Promise.all([RSStore.listClients(), RSStore.listProjectsLight()])
       .then(([clients, projects]) => {
-        listEl.innerHTML = "";
-        if (!clients.length) {
-          listEl.innerHTML = `<p class="dashboard-loading">Todavía no hay clientes — creá el primero con "Nuevo cliente".</p>`;
-          return;
-        }
-        clients.forEach((c) => {
-          const ownProjects = projects.filter((p) => p.client_id === c.id);
-          listEl.appendChild(renderClientCard(c, ownProjects));
-        });
-        RS.hydrateIcons();
+        allClients = clients;
+        allProjects = projects;
+        renderFilteredList();
       })
       .catch((e) => {
         listEl.innerHTML = `<p class="dashboard-loading">No se pudo cargar: ${e.message || e}</p>`;
@@ -143,6 +188,8 @@
   document.getElementById("logoutBtn").addEventListener("click", () => {
     RSStore.signOut().then(showGate);
   });
+  searchInput.addEventListener("input", renderFilteredList);
+  showArchivedToggle.addEventListener("change", renderFilteredList);
 
   RSStore.getSession().then((hasSession) => {
     if (hasSession) showApp();

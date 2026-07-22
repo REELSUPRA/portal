@@ -33,6 +33,13 @@
   <main class="shell">
     <section id="hero" class="hero"></section>
 
+    <section id="recentActivitySection" class="section" style="display:none;">
+      <div class="section__head">
+        <span class="section__title">Últimas novedades</span>
+      </div>
+      <div id="recentActivity"></div>
+    </section>
+
     <section class="section">
       <div class="section__head">
         <span class="section__title">Tus proyectos</span>
@@ -67,6 +74,7 @@
           RS.renderTopbar({ showBack: false });
           RS.renderAnnouncement();
           RS.renderHero();
+          RS.renderRecentActivity();
           RS.renderProjectGrid();
           RS.hydrateIcons();
           RSAdmin.init();

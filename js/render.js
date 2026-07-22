@@ -140,10 +140,7 @@ const RS = (() => {
   // genérico de listas), no son campos manuales aparte que puedan
   // desincronizarse.
   function projectActivity(project) {
-    const bitacora = (project.bitacora || [])
-      .map((e) => ({ ...e, dateObj: parseISODate(e.date) }))
-      .filter((e) => e.dateObj)
-      .sort((a, b) => b.dateObj - a.dateObj);
+    const bitacora = bitacoraEntries(project);
 
     const today = new Date();
     const nextMeeting = (project.calendar || [])
@@ -158,9 +155,8 @@ const RS = (() => {
     };
   }
 
-  function quickLinksRow(project) {
-    const links = project.links || [];
-    if (!links.length) return "";
+  function quickLinksRow(links) {
+    if (!links || !links.length) return "";
     return `<div class="quicklinks-row">${links.map((l) => {
       const preset = QUICKLINK_TYPES[l.type] || QUICKLINK_TYPES.custom;
       const color = l.color || preset.color;
@@ -249,6 +245,14 @@ const RS = (() => {
       ? `<span class="admin-mode-badge">${icon("move")} ${showBack ? "Modo administrador — arrastrá los bloques para reordenar" : "Modo administrador activo"}</span>`
       : "";
 
+    // Vista previa (Parte B, Fase 2): un admin real entró con
+    // ?preview=1 para ver el portal exactamente como lo ve el cliente
+    // (RS_ADMIN_MODE queda en false a propósito). Este banner es la
+    // única forma de volver — el botón Admin no aparece en este modo.
+    const previewBadge = window.RS_PREVIEW_MODE
+      ? `<a class="admin-mode-badge admin-mode-badge--preview" href="dashboard.html">${icon("eye")} Vista previa — así lo ve el cliente · Volver al Dashboard</a>`
+      : "";
+
     // Un cliente logueado (role=client) no debe ver el botón Admin —
     // solo lo ve un admin real o un visitante anónimo (que todavía lo
     // necesita para poder loguearse).
@@ -276,6 +280,7 @@ const RS = (() => {
         ${left}
         <div class="topbar__actions">
           ${adminBadge}
+          ${previewBadge}
           ${adminToggleBtn}
           ${logoutBtn}
         </div>
@@ -298,6 +303,24 @@ const RS = (() => {
      INDEX PAGE
      ---------------------------------------------------------- */
 
+  // Accesos rápidos del "Dashboard de bienvenida" (Fase 2, Parte C):
+  // no hay un client-level "links" en el schema (viven por proyecto),
+  // así que se juntan los de todos los proyectos del cliente,
+  // deduplicados por URL — mismo componente visual que ya usa el
+  // Smart Header de project.html (quickLinksRow), sin CSS/JS nuevo.
+  function clientQuickLinks(data) {
+    const seen = new Set();
+    const links = [];
+    (data.projects || []).forEach((p) => {
+      (p.links || []).forEach((l) => {
+        if (!l.url || seen.has(l.url)) return;
+        seen.add(l.url);
+        links.push(l);
+      });
+    });
+    return links;
+  }
+
   function renderHero() {
     const data = window.CLIENT_DATA;
     const el = document.getElementById("hero");
@@ -317,7 +340,8 @@ const RS = (() => {
       ${cover}
       <div class="hero__eyebrow">Portal del cliente</div>
       <h1 class="hero__title">Bienvenido, ${esc(data.client.name)} ${data.client.greetingEmoji || ""}</h1>
-      <p class="hero__message">${esc(data.client.welcomeMessage)}</p>`;
+      <p class="hero__message">${esc(data.client.welcomeMessage)}</p>
+      ${quickLinksRow(clientQuickLinks(data))}`;
   }
 
   function projectAvatar(p, size = 26) {
@@ -360,6 +384,45 @@ const RS = (() => {
         </div>
       </article>`;
     }).join("");
+  }
+
+  const RECENT_ACTIVITY_LIMIT = 5;
+
+  // Novedades recientes de TODOS los proyectos del cliente, para el
+  // Dashboard de bienvenida (Fase 2, Parte C) — se calculan acá en vez
+  // de traerlas con una consulta aparte porque load() ya trajo todos
+  // los proyectos del cliente (con su bitácora) para pintar projectGrid;
+  // reusar eso en memoria es más simple que un round-trip nuevo.
+  function clientRecentActivity(limit = RECENT_ACTIVITY_LIMIT) {
+    const data = window.CLIENT_DATA;
+    const entries = [];
+    (data.projects || []).forEach((p) => {
+      bitacoraEntries(p).forEach((e) => entries.push({ ...e, projectId: p.id, projectName: p.name }));
+    });
+    entries.sort((a, b) => b.dateObj - a.dateObj);
+    return entries.slice(0, limit);
+  }
+
+  function renderRecentActivity() {
+    const section = document.getElementById("recentActivitySection");
+    const el = document.getElementById("recentActivity");
+    if (!section || !el) return;
+
+    const entries = clientRecentActivity();
+    if (!entries.length) {
+      section.style.display = "none";
+      return;
+    }
+    section.style.display = "";
+    el.innerHTML = `<div class="roadmap">${entries.map((e) => {
+      const type = BITACORA_TYPE[e.type] ? e.type : "note";
+      return `
+      <a class="roadmap__item roadmap__item--${type} roadmap__item--link" href="project.html?id=${encodeURIComponent(e.projectId)}">
+        <span class="roadmap__dot"></span>
+        <div class="roadmap__phase">${icon(BITACORA_TYPE[type].icon)}${esc(e.text)}</div>
+        <span class="roadmap__tag">${esc(e.projectName)} · ${esc(formatDateHuman(e.dateObj))}</span>
+      </a>`;
+    }).join("")}</div>`;
   }
 
   /* ----------------------------------------------------------
@@ -489,17 +552,25 @@ const RS = (() => {
 
   // ----- Bitácora -----
 
-  // La Bitácora reutiliza el mismo componente visual de timeline que
-  // ya existe para el Roadmap (línea + punto) — solo agrega un ícono
-  // por tipo de evento en vez del estado in-progress/upcoming/done.
-  function blockBitacora(project) {
-    const entries = (project.bitacora || [])
+  // Últimas novedades a mostrar en el bloque antes de recortar con
+  // "Ver historial completo" (Fase 2, Parte D) — el historial entero
+  // sigue disponible en el modal de solo lectura (js/admin.js).
+  const BITACORA_RECENT_LIMIT = 5;
+
+  // Todas las entradas de bitácora de un proyecto, ordenadas de más
+  // reciente a más vieja — usado tanto por blockBitacora() (recorte)
+  // como por projectActivity() (necesita el historial completo) y por
+  // el modal "Ver historial" de admin.js (vía RS.bitacoraEntries).
+  function bitacoraEntries(project) {
+    return (project.bitacora || [])
       .map((e) => ({ ...e, dateObj: parseISODate(e.date) }))
       .filter((e) => e.dateObj)
       .sort((a, b) => b.dateObj - a.dateObj);
+  }
 
-    if (!entries.length) return `<p class="empty-hint">Todavía no hay novedades registradas.</p>`;
-
+  // Markup del timeline (línea + punto), reutilizado tal cual por
+  // blockBitacora() y por el modal de historial completo.
+  function bitacoraTimelineHtml(entries) {
     return `<div class="roadmap">${entries.map((e) => {
       const type = BITACORA_TYPE[e.type] ? e.type : "note";
       return `
@@ -509,6 +580,24 @@ const RS = (() => {
         <span class="roadmap__tag">${esc(formatDateHuman(e.dateObj))}</span>
       </div>`;
     }).join("")}</div>`;
+  }
+
+  // La Bitácora reutiliza el mismo componente visual de timeline que
+  // ya existe para el Roadmap (línea + punto) — solo agrega un ícono
+  // por tipo de evento en vez del estado in-progress/upcoming/done.
+  // Muestra solo las últimas BITACORA_RECENT_LIMIT — el resto queda
+  // atrás de "Ver historial completo" (menos scroll, ver CLAUDE.md
+  // Fase 2).
+  function blockBitacora(project) {
+    const entries = bitacoraEntries(project);
+    if (!entries.length) return `<p class="empty-hint">Todavía no hay novedades registradas.</p>`;
+
+    const recent = entries.slice(0, BITACORA_RECENT_LIMIT);
+    const historyBtn = entries.length > BITACORA_RECENT_LIMIT
+      ? `<button type="button" class="btn btn--ghost btn--sm" data-bitacora-history>${icon("history")} Ver historial completo (${entries.length})</button>`
+      : "";
+
+    return `${bitacoraTimelineHtml(recent)}${historyBtn}`;
   }
 
   // ----- Mejoras disponibles (Upsells) -----
@@ -605,23 +694,49 @@ const RS = (() => {
      BLOCK REGISTRY
      ---------------------------------------------------------- */
 
+  // "tab": a qué pestaña de la vista cliente pertenece este bloque
+  // (Fase 2, Parte E — ver PROJECT_TABS). Puramente declarativo: no
+  // afecta el modo admin (que sigue siendo el scroll plano de siempre
+  // con drag&drop), ni el editor genérico de listas.
   const BLOCK_DEFS = {
-    goals: { title: "Objetivos", icon: "target", render: blockGoals },
-    roadmap: { title: "Hoja de ruta", icon: "git-branch", render: blockRoadmap },
-    contentPieces: { title: "Piezas de contenido", icon: "film", render: blockContentPieces },
-    calendar: { title: "Calendario", icon: "calendar", render: blockCalendar },
-    nextSteps: { title: "Próximos pasos", icon: "arrow-right-circle", render: blockNextSteps },
-    pendingMaterial: { title: "Material pendiente", icon: "hourglass", render: blockPending },
-    resources: { title: "Recursos", icon: "bookmark", render: blockResources },
-    documents: { title: "Documentos", icon: "file-text", render: blockDocuments },
+    goals: { title: "Objetivos", icon: "target", render: blockGoals, tab: "resumen" },
+    roadmap: { title: "Hoja de ruta", icon: "git-branch", render: blockRoadmap, tab: "planificacion" },
+    contentPieces: { title: "Piezas de contenido", icon: "film", render: blockContentPieces, tab: "planificacion" },
+    calendar: { title: "Calendario", icon: "calendar", render: blockCalendar, tab: "planificacion" },
+    nextSteps: { title: "Próximos pasos", icon: "arrow-right-circle", render: blockNextSteps, tab: "resumen" },
+    pendingMaterial: { title: "Material pendiente", icon: "hourglass", render: blockPending, tab: "resumen" },
+    resources: { title: "Recursos", icon: "bookmark", render: blockResources, tab: "recursos" },
+    documents: { title: "Documentos", icon: "file-text", render: blockDocuments, tab: "recursos" },
     // "links" ya no se dibuja como bloque aparte (ver defaultBlockOrder
     // en data.js) — se integró al Header Inteligente como accesos
     // rápidos. Se deja la entrada acá porque el editor genérico de
     // listas (RS.LIST_SCHEMAS) lee título/ícono de este registro.
-    links: { title: "Accesos rápidos", icon: "zap", render: blockLinks },
-    bitacora: { title: "Bitácora", icon: "notebook-pen", render: blockBitacora },
-    upsells: { title: "Mejoras disponibles", icon: "sparkles", render: blockUpsells },
+    links: { title: "Accesos rápidos", icon: "zap", render: blockLinks, tab: "recursos" },
+    bitacora: { title: "Bitácora", icon: "notebook-pen", render: blockBitacora, tab: "actividad" },
+    upsells: { title: "Mejoras disponibles", icon: "sparkles", render: blockUpsells, tab: "resumen" },
   };
+
+  // Pestañas de la vista cliente en project.html (Fase 2, Parte E) —
+  // agrupan los bloques de BLOCK_DEFS por su campo "tab" para reducir
+  // el scroll. Orden fijo; una pestaña sin bloques visibles no se
+  // muestra (ver renderBlocks()).
+  const PROJECT_TABS = [
+    { id: "resumen", label: "Resumen", icon: "layout-dashboard" },
+    { id: "planificacion", label: "Planificación", icon: "git-branch" },
+    { id: "recursos", label: "Recursos", icon: "bookmark" },
+    { id: "actividad", label: "Actividad", icon: "notebook-pen" },
+  ];
+
+  // Pestaña activa en project.html — se conserva entre renders (ej. al
+  // navegar el calendario) igual que calendarState.
+  let activeProjectTab = null;
+
+  document.addEventListener("click", (e) => {
+    const tabBtn = e.target.closest("[data-project-tab]");
+    if (!tabBtn) return;
+    activeProjectTab = tabBtn.dataset.projectTab;
+    renderProjectDetail();
+  });
 
   // Editor genérico de listas — esquema declarativo por tipo de dato.
   // admin.js lee esto (más título/ícono de BLOCK_DEFS, sin duplicarlos)
@@ -742,7 +857,7 @@ const RS = (() => {
         <div class="meta-item"><div class="meta-item__label">Plan contratado</div><div class="meta-item__value">${esc(project.plan)} — ${esc(project.planDetail)}</div></div>
       </div>
       <div class="smart-header">
-        ${quickLinksRow(project)}
+        ${quickLinksRow(project.links)}
         ${contentProgressBlock.total ? `
           <div class="smart-header__progress-label">Progreso del proyecto</div>
           ${progressBar(contentProgressBlock.percent, "lg")}` : ""}
@@ -767,29 +882,61 @@ const RS = (() => {
     renderBlocks(project);
   }
 
+  function blockCardHtml(b, project, admin) {
+    const def = BLOCK_DEFS[b.id];
+    if (!def) return "";
+    const hiddenClass = !b.visible ? "block-card--hidden" : "";
+    return `
+    <section class="block-card ${hiddenClass}" data-block-id="${b.id}" ${admin ? 'draggable="true"' : ""}>
+      <header class="block-card__head">
+        ${admin ? `<span class="drag-handle" title="Arrastrar para reordenar">${icon("grip-vertical")}</span>` : ""}
+        <h3 class="block-card__title">${icon(def.icon)}${def.title}</h3>
+        ${admin ? `<button class="block-visibility-toggle" data-toggle-block="${b.id}" title="${b.visible ? "Ocultar del cliente" : "Mostrar al cliente"}">${icon(b.visible ? "eye" : "eye-off")}</button>` : ""}
+      </header>
+      <div class="block-card__body">${def.render(project)}</div>
+    </section>`;
+  }
+
   function renderBlocks(project) {
     const container = document.getElementById("blocksContainer");
     if (!container) return;
     const admin = isAdmin();
     const blocks = project.blocks && project.blocks.length ? project.blocks : Object.keys(BLOCK_DEFS).map((id) => ({ id, visible: true }));
+    const visibleBlocks = blocks.filter((b) => admin || b.visible);
 
-    container.innerHTML = blocks
-      .filter((b) => admin || b.visible)
-      .map((b) => {
-        const def = BLOCK_DEFS[b.id];
-        if (!def) return "";
-        const hiddenClass = !b.visible ? "block-card--hidden" : "";
-        return `
-        <section class="block-card ${hiddenClass}" data-block-id="${b.id}" ${admin ? 'draggable="true"' : ""}>
-          <header class="block-card__head">
-            ${admin ? `<span class="drag-handle" title="Arrastrar para reordenar">${icon("grip-vertical")}</span>` : ""}
-            <h3 class="block-card__title">${icon(def.icon)}${def.title}</h3>
-            ${admin ? `<button class="block-visibility-toggle" data-toggle-block="${b.id}" title="${b.visible ? "Ocultar del cliente" : "Mostrar al cliente"}">${icon(b.visible ? "eye" : "eye-off")}</button>` : ""}
-          </header>
-          <div class="block-card__body">${def.render(project)}</div>
-        </section>`;
-      }).join("");
+    if (admin) {
+      // Modo admin: scroll plano de siempre, con drag&drop — las
+      // pestañas (Parte E) son solo para la vista del cliente, no
+      // afectan al editor.
+      container.innerHTML = visibleBlocks.map((b) => blockCardHtml(b, project, true)).join("");
+      hydrateIcons();
+      return;
+    }
 
+    // Vista cliente: agrupar los bloques por pestaña (BLOCK_DEFS[id].tab)
+    // para reducir el scroll — ver CLAUDE.md Fase 2, Parte E.
+    const byTab = {};
+    visibleBlocks.forEach((b) => {
+      const def = BLOCK_DEFS[b.id];
+      if (!def) return;
+      const tabId = def.tab || "resumen";
+      (byTab[tabId] = byTab[tabId] || []).push(b);
+    });
+    const tabsWithContent = PROJECT_TABS.filter((t) => byTab[t.id] && byTab[t.id].length);
+
+    if (!tabsWithContent.length) {
+      container.innerHTML = "";
+      return;
+    }
+    if (!activeProjectTab || !byTab[activeProjectTab]) {
+      activeProjectTab = tabsWithContent[0].id;
+    }
+
+    const tabBar = `<div class="project-tabs">${tabsWithContent.map((t) => `
+      <button type="button" class="project-tab ${t.id === activeProjectTab ? "is-active" : ""}" data-project-tab="${t.id}">${icon(t.icon)}${t.label}</button>`).join("")}</div>`;
+    const panel = byTab[activeProjectTab].map((b) => blockCardHtml(b, project, false)).join("");
+
+    container.innerHTML = `${tabBar}<div class="project-tab-panel">${panel}</div>`;
     hydrateIcons();
   }
 
@@ -811,9 +958,10 @@ const RS = (() => {
 
   return {
     esc, icon, isAdmin, applyTheme, applyBranding,
-    renderTopbar, renderAnnouncement, renderHero, renderProjectGrid,
+    renderTopbar, renderAnnouncement, renderHero, renderProjectGrid, renderRecentActivity,
     renderProjectDetail, renderBlocks, navigateCalendar,
     getProjectFromURL, hydrateIcons, projectAvatar,
+    bitacoraEntries, bitacoraTimelineHtml,
     BLOCK_DEFS, STATUS_LABEL, THEME_SCHEMA, LIST_SCHEMAS,
   };
 })();

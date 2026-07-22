@@ -317,11 +317,12 @@ window.RSStore = (() => {
 
   // Lista para el selector de clientes y el Dashboard — trae también
   // el estado de acceso (para mostrarlo sin un round-trip extra por
-  // cliente), pero no listas/jsonb pesados.
+  // cliente) y "archived" (para el toggle "Ver archivados"), pero no
+  // listas/jsonb pesados.
   function listClients() {
     return client()
       .from("clients")
-      .select("id, slug, name, portal_email, portal_user_id, portal_access_status")
+      .select("id, slug, name, portal_email, portal_user_id, portal_access_status, archived")
       .order("name", { ascending: true })
       .then(({ data, error }) => {
         if (error) throw error;
@@ -362,6 +363,37 @@ window.RSStore = (() => {
       .then(({ data, error }) => {
         if (error) throw error;
         return rowToClient(data);
+      });
+  }
+
+  // Editar los campos básicos de un cliente desde el Dashboard (nombre,
+  // slug, emoji de saludo) — un update liviano, separado de save(),
+  // porque el modal del Dashboard no carga (ni necesita) el resto del
+  // objeto CLIENT_DATA (tema, portada, proyectos, etc.).
+  function updateClientBasic(clientId, { name, slug, greeting_emoji }) {
+    return client()
+      .from("clients")
+      .update({ name, slug, greeting_emoji })
+      .eq("id", clientId)
+      .select()
+      .single()
+      .then(({ data, error }) => {
+        if (error) throw error;
+        return rowToClient(data);
+      });
+  }
+
+  // Archivar/restaurar un cliente desde el Dashboard — solo lo oculta
+  // de la lista activa (ver supabase/07_client_archive.sql); no toca
+  // RLS ni el acceso al portal del cliente.
+  function setClientArchived(clientId, archived) {
+    return client()
+      .from("clients")
+      .update({ archived })
+      .eq("id", clientId)
+      .then(({ error }) => {
+        if (error) throw error;
+        return true;
       });
   }
 
@@ -454,5 +486,6 @@ window.RSStore = (() => {
     load, save, clear, hydrate,
     signIn, signOut, getSession, isCurrentUserAdmin, getCurrentUserAccess,
     listClients, listProjectsLight, createClient, createProject, manageAccess, uploadImage,
+    updateClientBasic, setClientArchived,
   };
 })();

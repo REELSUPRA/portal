@@ -734,6 +734,22 @@ button {
   padding-bottom: 0;
 }
 
+/* Novedades recientes del Dashboard de bienvenida (Fase 2, Parte C):
+   cada entrada linkea al proyecto de origen — mismo .roadmap__item,
+   pero como <a>, que por defecto es inline y rompería el layout sin
+   este display:block. */
+.roadmap__item--link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition: opacity var(--duration) var(--ease);
+}
+
+.roadmap__item--link:hover {
+  opacity: 0.7;
+}
+
 .roadmap__dot {
   position: absolute;
   left: calc(var(--space-6) * -1 - 5px);
@@ -1253,12 +1269,16 @@ button {
 .dashboard-card__header {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: var(--space-3);
   margin-bottom: var(--space-4);
 }
 
 .dashboard-card__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   font-size: 18px;
   font-weight: 700;
   color: var(--rs-black);
@@ -1286,6 +1306,67 @@ button {
 .dashboard-project-row:hover {
   background: var(--rs-gray-50);
   color: var(--rs-black);
+}
+
+.dashboard-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+.dashboard-search {
+  flex: 1;
+  font-family: var(--font-sans);
+  font-size: 16px;
+  padding: 10px var(--space-3);
+  border: 1px solid var(--rs-gray-100);
+  border-radius: var(--radius-sm);
+  background: var(--rs-gray-50);
+  transition: border-color var(--duration) var(--ease);
+}
+
+.dashboard-search:focus {
+  border-color: var(--rs-black);
+  outline: none;
+}
+
+.dashboard-archived-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--rs-gray-500);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.dashboard-card--archived {
+  opacity: 0.7;
+}
+
+.dashboard-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.dashboard-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+
+.dashboard-badge--archived {
+  color: var(--rs-gray-500);
+  background: var(--rs-gray-100);
 }
 
 .admin-overlay {
@@ -1389,6 +1470,47 @@ button {
   padding: var(--space-10) 0 var(--space-16);
 }
 
+/* Pestañas de project.html en vista cliente (Fase 2, Parte E) — solo
+   se pintan cuando NO es admin (ver renderBlocks()); el modo admin
+   sigue siendo el scroll plano de .block-card de siempre. */
+.project-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.project-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--rs-gray-100);
+  background: var(--rs-white);
+  color: var(--rs-gray-500);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--duration) var(--ease);
+}
+
+.project-tab:hover {
+  border-color: var(--rs-gray-300);
+  color: var(--rs-black);
+}
+
+.project-tab.is-active {
+  background: var(--rs-black);
+  border-color: var(--rs-black);
+  color: var(--rs-white);
+}
+
+.project-tab-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
 .block-card {
   border: 1px solid var(--rs-gray-100);
   border-radius: var(--radius-lg);
@@ -1470,6 +1592,20 @@ button {
   background: var(--rs-red-dim);
   padding: 6px 12px;
   border-radius: 999px;
+}
+
+/* Vista previa (Fase 2, Parte B): mismo tratamiento de badge, pero es
+   un link (volver al Dashboard) y usa el negro/gris del design system
+   en vez del rojo (que ya significa "modo admin activo"). */
+.admin-mode-badge--preview {
+  color: var(--rs-white);
+  background: var(--rs-black);
+  text-decoration: none;
+  transition: opacity var(--duration) var(--ease);
+}
+
+.admin-mode-badge--preview:hover {
+  opacity: 0.85;
 }
 
 .btn--sm {

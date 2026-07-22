@@ -33,6 +33,12 @@
     </div>
 
     <div id="app" class="dashboard-app" style="display:none;">
+      <div class="dashboard-toolbar">
+        <input type="search" id="clientSearchInput" class="dashboard-search" placeholder="Buscar cliente por nombre o slug..." />
+        <label class="dashboard-archived-toggle">
+          <input type="checkbox" id="showArchivedToggle" /> Ver archivados
+        </label>
+      </div>
       <div id="clientList" class="dashboard-client-list"></div>
     </div>
   </main>
