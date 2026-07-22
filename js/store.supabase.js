@@ -228,10 +228,14 @@ window.RSStore = (() => {
   // porque ahora puede faltar más de una a la vez.
   const OPTIONAL_PROJECT_COLUMNS = ["market", "deliverables"];
 
+  // .select().single() siempre encadenado: save() no usa la fila
+  // devuelta (solo mira .error), pero createProject() sí la necesita
+  // para devolver el proyecto recién creado — reutiliza esta misma
+  // función en vez de duplicar el insert + la lógica de reintento.
   function upsertProjectRow(row, existingId, remainingOptional = OPTIONAL_PROJECT_COLUMNS) {
     const query = existingId
-      ? client().from("projects").update(row).eq("id", existingId)
-      : client().from("projects").insert(row);
+      ? client().from("projects").update(row).eq("id", existingId).select().single()
+      : client().from("projects").insert(row).select().single();
     return query.then((res) => {
       if (res.error && res.error.code === "42703" && remainingOptional.length) {
         const [drop, ...rest] = remainingOptional;
@@ -473,21 +477,36 @@ window.RSStore = (() => {
       });
   }
 
-  // Crear un proyecto nuevo ya asociado a un cliente — defaults
-  // vacíos, mismo shape que espera rowToProject()/render.js.
-  function createProject(clientId, { name, slug }) {
-    return client()
-      .from("projects")
-      .insert({
-        client_id: clientId,
-        slug,
-        name,
-        goals: [], roadmap: [], content_pieces: [], next_steps: [],
-        pending_material: [], resources: [], documents: [], links: [],
-        calendar: [], bitacora: [], upsells: [], hero_slides: [], blocks: [],
-      })
-      .select()
-      .single()
+  // Crear un proyecto nuevo ya asociado a un cliente. goals/roadmap/
+  // nextSteps/upsells/deliverables/blocks son opcionales — los llena
+  // un preset resuelto (RS.resolveProjectPreset(), Fase 3) cuando
+  // corresponde; sin preset, siguen vacíos exactamente como antes.
+  // Nunca completa sector/audience/language/market/resources/
+  // documents/links/calendar/bitacora/contentPieces/pendingMaterial —
+  // esos parámetros ni existen acá, quedan 100% manuales como siempre.
+  // Reutiliza upsertProjectRow() (no un insert aparte) para heredar el
+  // mismo reintento defensivo ante columnas todavía no migradas.
+  function createProject(clientId, { name, slug, goals, roadmap, nextSteps, upsells, deliverables, blocks }) {
+    const row = {
+      client_id: clientId,
+      slug,
+      name,
+      goals: goals || [],
+      roadmap: roadmap || [],
+      content_pieces: [],
+      next_steps: nextSteps || [],
+      pending_material: [],
+      resources: [],
+      documents: [],
+      links: [],
+      calendar: [],
+      bitacora: [],
+      upsells: upsells || [],
+      deliverables: deliverables || [],
+      hero_slides: [],
+      blocks: blocks || [],
+    };
+    return upsertProjectRow(row, null)
       .then(({ data, error }) => {
         if (error) throw error;
         return rowToProject(data);
