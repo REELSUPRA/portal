@@ -77,6 +77,11 @@ const RS = (() => {
     { group: "Tipografía", key: "bodyWeight", label: "Peso del cuerpo", cssVar: "--rs-font-weight-body", type: "select", options: ["400", "500", "600"], default: "400" },
     { group: "Tipografía", key: "lineHeight", label: "Altura de línea", cssVar: "--rs-line-height", type: "range", unit: "", min: 1.2, max: 1.9, step: 0.05, default: 1.5 },
     { group: "Tipografía", key: "letterSpacing", label: "Espaciado de títulos", cssVar: "--rs-letter-spacing", type: "range", unit: "em", min: -0.04, max: 0.04, step: 0.005, default: -0.02 },
+    // Portada (Fase 2, ajuste): la misma imagen ahora usa la misma
+    // proporción en desktop/tablet/mobile (ver .hero__cover en
+    // styles.css) — esto es la válvula de escape manual para cuando el
+    // centrado automático de object-fit:cover corta algo importante.
+    { group: "Portada", key: "coverPosition", label: "Posición de la portada", cssVar: "--hero-cover-position", type: "select", options: ["center", "top", "bottom", "left", "right"], default: "center" },
   ];
 
   // Estado de navegación del calendario (mes que se está mostrando).

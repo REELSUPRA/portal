@@ -273,10 +273,18 @@ button {
   line-height: 1.6;
 }
 
+/* Misma proporción en todos los tamaños de pantalla (antes: 200px fijos
+   en desktop vs. aspect-ratio 4/3 en mobile — la MISMA imagen quedaba
+   recortada de forma completamente distinta según el dispositivo).
+   21/9 se eligió porque es la que ya venía dando desktop en la práctica
+   (banner ancho y bajo) — ahora escala igual en vez de cambiar de
+   forma. --hero-cover-position es configurable desde el Theme Builder
+   (RS.THEME_SCHEMA, grupo "Portada") para los casos en que el centro
+   automático de object-fit:cover no sea el punto correcto de la imagen. */
 .hero__cover {
   position: relative;
   width: 100%;
-  height: 200px;
+  aspect-ratio: 21 / 9;
   border-radius: var(--radius-lg);
   overflow: hidden;
   margin-bottom: var(--space-8);
@@ -286,10 +294,11 @@ button {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: var(--hero-cover-position, center);
 }
 
 .hero__cover--empty {
-  height: 120px;
+  aspect-ratio: 21 / 9;
   border: 1.5px dashed var(--rs-gray-100);
   display: flex;
   align-items: center;
@@ -2264,18 +2273,14 @@ button {
 
   /* Portada: prioridad visual apenas se entra, no "comprimida" —
      sangra hasta el borde de la pantalla en vez de quedar encajonada
-     dentro del padding del shell. */
+     dentro del padding del shell. La proporción (21/9) es la MISMA que
+     en desktop a propósito — antes cambiaba a 4/3 acá, y la misma
+     imagen quedaba recortada distinto según el dispositivo. */
   .hero__cover,
   .hero__cover--empty {
-    height: auto;
-    aspect-ratio: 4 / 3;
     margin-left: calc(var(--space-4) * -1);
     margin-right: calc(var(--space-4) * -1);
     border-radius: 0 0 var(--radius-lg) var(--radius-lg);
-  }
-
-  .hero__cover--empty {
-    aspect-ratio: 16 / 9;
   }
 
   /* Sector/Idioma/Público/Plan en 2 columnas prolijas en vez de
