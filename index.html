@@ -43,18 +43,19 @@
     <div id="portalApp" style="display:none;">
       <section id="hero" class="hero"></section>
 
-      <section id="newsTickerSection" class="section" style="display:none;">
-        <div class="section__head">
-          <span class="section__title">Últimas novedades</span>
-        </div>
-        <div id="newsTicker"></div>
-      </section>
-
+      <!-- Tarjetas inmediatamente debajo de la bienvenida, sin nada en
+           medio — son el elemento principal del Dashboard de bienvenida. -->
       <section class="section">
         <div class="section__head">
           <span class="section__title">Tus proyectos</span>
         </div>
         <div id="projectGrid" class="project-grid stagger"></div>
+      </section>
+
+      <!-- Ticker al final, como una franja de noticiero — no una
+           "sección" con título, solo la cinta que se desplaza sola. -->
+      <section id="newsTickerSection" style="display:none;">
+        <div id="newsTicker"></div>
       </section>
     </div>
   </main>
@@ -105,8 +106,8 @@
           RS.renderTopbar({ showBack: false });
           RS.renderAnnouncement();
           RS.renderHero();
-          RS.renderNewsTicker();
           RS.renderProjectGrid();
+          RS.renderNewsTicker();
           RS.hydrateIcons();
           RSAdmin.init();
           removeLoadingOverlay();

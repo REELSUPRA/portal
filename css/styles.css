@@ -336,7 +336,13 @@ button {
    Fase 2) — reemplaza al listado/timeline de bitácora agregada: una
    sola línea que se desplaza sola, sin ocupar espacio vertical. El
    contenido viene duplicado una vez en el HTML (ver renderNewsTicker())
-   para que el loop de la animación no se note al cerrar el círculo. */
+   para que el loop de la animación no se note al cerrar el círculo.
+   No usa .section (sin título de sección, es solo la cinta) — el
+   padding inferior propio evita que quede pegado al footer. */
+#newsTickerSection {
+  padding-bottom: var(--space-12);
+}
+
 .news-ticker {
   overflow: hidden;
   border: 1px solid var(--rs-gray-100);
