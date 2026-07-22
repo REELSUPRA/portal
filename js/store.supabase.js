@@ -343,14 +343,36 @@ window.RSStore = (() => {
   // el estado de acceso (para mostrarlo sin un round-trip extra por
   // cliente) y "archived" (para el toggle "Ver archivados"), pero no
   // listas/jsonb pesados.
+  //
+  // "archived" (supabase/07_client_archive.sql) puede no estar aplicada
+  // todavía en este proyecto de Supabase — no hay que bloquear TODO el
+  // Dashboard (ni ocultar a los clientes reales) por una columna que
+  // todavía no existe. Si el select falla específicamente por eso
+  // (42703 = "column does not exist" en Postgres), reintenta sin esa
+  // columna y asume archived=false para todos — exactamente lo que
+  // significa "ninguno está archivado todavía".
   function listClients() {
     return client()
       .from("clients")
       .select("id, slug, name, portal_email, portal_user_id, portal_access_status, archived")
       .order("name", { ascending: true })
       .then(({ data, error }) => {
-        if (error) throw error;
+        if (error) {
+          if (error.code === "42703") return listClientsWithoutArchivedColumn();
+          throw error;
+        }
         return data || [];
+      });
+  }
+
+  function listClientsWithoutArchivedColumn() {
+    return client()
+      .from("clients")
+      .select("id, slug, name, portal_email, portal_user_id, portal_access_status")
+      .order("name", { ascending: true })
+      .then(({ data, error }) => {
+        if (error) throw error;
+        return (data || []).map((row) => ({ ...row, archived: false }));
       });
   }
 
