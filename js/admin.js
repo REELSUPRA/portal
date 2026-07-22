@@ -1587,12 +1587,25 @@
           <label>Slug (para la URL)</label>
           <input type="text" id="projectFormSlugInput" autocomplete="off" spellcheck="false" />
         </div>
+        <div class="admin-field">
+          <label>Preset (estructura inicial — Objetivos, Roadmap, Próximos pasos, Mejoras, Qué incluye)</label>
+          <select id="projectFormPresetSelect"></select>
+        </div>
         <button class="btn btn--primary" id="projectFormSubmitBtn" style="width:100%; justify-content:center;">${RS.icon("plus")} Crear proyecto</button>
       </div>
     </div>`;
     document.body.appendChild(projectFormModalEl);
     projectFormModalEl.addEventListener("click", (e) => { if (e.target === projectFormModalEl) closeProjectFormModal(); });
     projectFormModalEl.querySelector("#projectFormModalClose").addEventListener("click", closeProjectFormModal);
+
+    // Opciones fijas (RS.PROJECT_PRESETS no cambia en runtime) — el
+    // preset define estructura (goals/roadmap/nextSteps/upsells/
+    // deliverables/blocks), nunca Pack contratado — ese campo sigue
+    // siendo manual, se completa después desde el panel del proyecto.
+    const presetSelect = projectFormModalEl.querySelector("#projectFormPresetSelect");
+    presetSelect.innerHTML = Object.keys(RS.PROJECT_PRESETS)
+      .map((id) => `<option value="${id}">${RS.esc(RS.PROJECT_PRESETS[id].label)}</option>`)
+      .join("");
   }
 
   function closeProjectFormModal() {
@@ -1604,11 +1617,13 @@
     ensureProjectFormModal();
     const nameInput = projectFormModalEl.querySelector("#projectFormNameInput");
     const slugInput = projectFormModalEl.querySelector("#projectFormSlugInput");
+    const presetSelect = projectFormModalEl.querySelector("#projectFormPresetSelect");
     const submitBtn = projectFormModalEl.querySelector("#projectFormSubmitBtn");
     const titleEl = projectFormModalEl.querySelector("#projectFormModalTitle");
 
     nameInput.value = "";
     slugInput.value = "";
+    presetSelect.value = "generico";
     titleEl.innerHTML = `${RS.icon("folder-plus")} Nuevo proyecto para ${config.clientName}`;
 
     let slugTouched = false;
@@ -1623,7 +1638,20 @@
       if (!name) { showToast("Ingresá un nombre", "error"); return; }
       if (!slug) { showToast("Ingresá un slug", "error"); return; }
       submitBtn.disabled = true;
-      RSStore.createProject(config.clientId, { name, slug })
+      // Clon profundo del preset elegido — nunca la misma referencia
+      // entre proyectos (ver RS.resolveProjectPreset()). Nunca incluye
+      // Pack contratado ni datos propios del cliente (sector, público,
+      // mercado, recursos, etc.) — esos siguen siendo manuales.
+      const preset = RS.resolveProjectPreset(presetSelect.value);
+      RSStore.createProject(config.clientId, {
+        name, slug,
+        goals: preset.goals,
+        roadmap: preset.roadmap,
+        nextSteps: preset.nextSteps,
+        upsells: preset.upsells,
+        deliverables: preset.deliverables,
+        blocks: preset.blocks,
+      })
         .then((result) => {
           closeProjectFormModal();
           showToast("Proyecto creado");
