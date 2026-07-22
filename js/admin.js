@@ -492,6 +492,24 @@
     listEditorEl.classList.add("is-open");
   }
 
+  // Atajos que van directo al formulario (crear/editar), en vez de la
+  // vista de lista primero — para "Crear evento" y click-para-editar
+  // del calendario (ver blockCalendar()). Mismo modal/estado que
+  // openListEditor(), sin UI nueva.
+  function openListEditorForNewItem(project, listKey) {
+    ensureListEditorModal();
+    listEditorState = { project, listKey, mode: "list", editingIndex: null, draft: null };
+    startAddListItem();
+    listEditorEl.classList.add("is-open");
+  }
+
+  function openListEditorForItem(project, listKey, index) {
+    ensureListEditorModal();
+    listEditorState = { project, listKey, mode: "list", editingIndex: null, draft: null };
+    startEditListItem(index);
+    listEditorEl.classList.add("is-open");
+  }
+
   function closeListEditorModal() {
     if (listEditorEl) listEditorEl.classList.remove("is-open");
     refreshContentListCounts();
@@ -1124,6 +1142,31 @@
       const pieceEl = e.target.closest("[data-admin-edit-piece]");
       if (pieceEl) {
         openPieceEditor(pieceEl.dataset.adminEditPiece);
+        return;
+      }
+      const createPieceBtn = e.target.closest("[data-piece-create]");
+      if (createPieceBtn) {
+        createNewPiece();
+      }
+    });
+
+    // Calendario: crear evento nuevo / editar uno existente al hacer
+    // click (reutiliza el mismo editor de listas y el mismo modal de
+    // pieza que ya existían — ver openListEditorForNewItem/ForItem).
+    container.addEventListener("click", (e) => {
+      const addBtn = e.target.closest("[data-cal-add-event]");
+      if (addBtn) {
+        openListEditorForNewItem(currentProject(), "calendar");
+        return;
+      }
+      const editEvt = e.target.closest("[data-cal-edit-event]");
+      if (editEvt) {
+        openListEditorForItem(currentProject(), "calendar", parseInt(editEvt.dataset.calEditEvent, 10));
+        return;
+      }
+      const editPiece = e.target.closest("[data-cal-edit-piece]");
+      if (editPiece) {
+        openPieceEditor(editPiece.dataset.calEditPiece);
       }
     });
 
@@ -1198,6 +1241,7 @@
     const body = pieceModalEl.querySelector("#pieceModalBody");
     body.innerHTML = "";
     body.appendChild(field("Título del video", piece.title, (v) => (piece.title = v)));
+    body.appendChild(field("Tipo / Formato", piece.type, (v) => (piece.type = v)));
 
     const statusWrap = document.createElement("div");
     statusWrap.className = "admin-field";
@@ -1230,6 +1274,20 @@
 
   function closePieceModal() {
     if (pieceModalEl) pieceModalEl.classList.remove("is-open");
+  }
+
+  // "+ Crear pieza" (blockContentPieces()) — empuja una pieza vacía y
+  // abre el mismo modal de edición de siempre sobre ella. No hace
+  // falta un formulario de creación aparte: openPieceEditor() ya edita
+  // cualquier pieza por id, nueva o vieja, exactamente igual.
+  function createNewPiece() {
+    const project = currentProject();
+    const pieces = project.contentPieces || (project.contentPieces = []);
+    const id = `piece-${Date.now()}`;
+    pieces.push({ id, title: "", type: "", status: "pending", publishDate: "", videoUrl: "", note: "" });
+    markDirty();
+    RS.renderProjectDetail();
+    openPieceEditor(id);
   }
 
   /* ---------------------------------------------------------- */

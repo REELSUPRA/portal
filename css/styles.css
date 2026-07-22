@@ -1781,6 +1781,13 @@ button {
   color: var(--rs-gray-500);
 }
 
+.content-piece-head__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
 .upcoming-list li {
   display: flex;
   align-items: center;
@@ -1976,6 +1983,13 @@ button {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Editable en modo admin (click para editar el evento o la pieza de
+   contenido de origen — ver render.js blockCalendar()). */
+.cal-event[data-cal-edit-event],
+.cal-event[data-cal-edit-piece] {
+  cursor: pointer;
 }
 
 /* ============================================================

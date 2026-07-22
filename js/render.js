@@ -550,10 +550,17 @@ const RS = (() => {
           </li>`).join("")}</ul>`
       : `<p class="empty-hint">Todavía no hay fechas de publicación cargadas.</p>`;
 
+    const createBtn = isAdmin()
+      ? `<button type="button" class="btn btn--ghost btn--sm" data-piece-create>${icon("plus")} Crear pieza</button>`
+      : "";
+
     return `
       <div class="content-piece-head">
-        <div class="content-grid">${chips}</div>
-        <span class="content-piece-count">${delivered} de ${pieces.length} piezas entregadas</span>
+        ${pieces.length ? `<div class="content-grid">${chips}</div>` : `<p class="empty-hint">Todavía no hay piezas de contenido cargadas.</p>`}
+        <div class="content-piece-head__footer">
+          <span class="content-piece-count">${delivered} de ${pieces.length} piezas entregadas</span>
+          ${createBtn}
+        </div>
       </div>
       ${upcomingList}`;
   }
@@ -627,8 +634,12 @@ const RS = (() => {
   // ----- Calendario -----
 
   function getCalendarEvents(project) {
-    const events = (project.calendar || []).map((c) => ({
-      date: parseISODate(c.date), label: c.label, note: "", type: "reunion",
+    // calendarIndex/pieceId: para que blockCalendar() sepa qué editar al
+    // hacer click — un "reunion" viene de project.calendar[calendarIndex]
+    // (editable con RS.LIST_SCHEMAS.calendar), un "publicacion" viene de
+    // la fecha de una pieza de contenido (se edita desde ahí, no acá).
+    const events = (project.calendar || []).map((c, i) => ({
+      date: parseISODate(c.date), label: c.label, note: "", type: "reunion", calendarIndex: i,
     }));
 
     (project.contentPieces || []).forEach((p) => {
@@ -638,6 +649,7 @@ const RS = (() => {
         label: p.title || "Publicación sugerida",
         note: p.note || "",
         type: "publicacion",
+        pieceId: p.id,
       });
     });
 
@@ -677,7 +689,15 @@ const RS = (() => {
       const isToday = year === today.getFullYear() && month === today.getMonth() && d === today.getDate();
       cells += `<div class="cal-cell ${isToday ? "cal-cell--today" : ""}">
         <span class="cal-cell__num">${d}</span>
-        ${dayEvents.map((e) => `<span class="cal-event cal-event--${e.type}" title="${esc(e.note || "")}">${esc(e.label)}</span>`).join("")}
+        ${dayEvents.map((e) => {
+          // Editable solo en modo admin — un "reunion" edita el evento de
+          // calendario (RS.LIST_SCHEMAS.calendar), un "publicacion" edita
+          // la pieza de contenido de donde sale la fecha.
+          const editAttr = !isAdmin() ? "" :
+            e.type === "reunion" ? `data-cal-edit-event="${e.calendarIndex}" role="button" tabindex="0"` :
+            e.pieceId ? `data-cal-edit-piece="${e.pieceId}" role="button" tabindex="0"` : "";
+          return `<span class="cal-event cal-event--${e.type}" title="${esc(e.note || "")}" ${editAttr}>${esc(e.label)}</span>`;
+        }).join("")}
       </div>`;
     }
 
@@ -685,6 +705,7 @@ const RS = (() => {
       <div class="cal-toolbar">
         <span class="cal-toolbar__month">${MONTHS[month]} ${year}</span>
         <div class="cal-toolbar__nav">
+          ${isAdmin() ? `<button type="button" class="btn btn--ghost btn--sm" data-cal-add-event>${icon("plus")} Crear evento</button>` : ""}
           <button class="cal-nav-btn" data-cal-nav="-1" aria-label="Mes anterior">${icon("chevron-left")}</button>
           <button class="cal-nav-btn" data-cal-nav="today" aria-label="Hoy">Hoy</button>
           <button class="cal-nav-btn" data-cal-nav="1" aria-label="Mes siguiente">${icon("chevron-right")}</button>
