@@ -455,6 +455,16 @@ const RS = (() => {
       .map((g) => `<li>${icon("target")}<span>${esc(g)}</span></li>`).join("")}</ul>`;
   }
 
+  // "Qué incluye este proyecto" — checklist de servicios/entregables
+  // incluidos (Landing Page, Automatización IA, Videos adicionales,
+  // etc.). Un preset puede cargar una versión inicial (ver
+  // RS.PROJECT_PRESETS), pero se edita después igual que Objetivos —
+  // mismo componente visual, misma lista genérica, sin UI nueva.
+  function blockDeliverables(project) {
+    return `<ul class="check-list">${(project.deliverables || [])
+      .map((d) => `<li>${icon("package-check")}<span>${esc(d)}</span></li>`).join("")}</ul>`;
+  }
+
   function blockRoadmap(project) {
     return `<div class="roadmap">${(project.roadmap || []).map((r) => `
       <div class="roadmap__item roadmap__item--${r.status}">
@@ -743,6 +753,7 @@ const RS = (() => {
     links: { title: "Accesos rápidos", icon: "zap", render: blockLinks, tab: "recursos" },
     bitacora: { title: "Bitácora", icon: "notebook-pen", render: blockBitacora, tab: "trabajo" },
     upsells: { title: "Mejoras disponibles", icon: "sparkles", render: blockUpsells, tab: "resumen" },
+    deliverables: { title: "Qué incluye este proyecto", icon: "package-check", render: blockDeliverables, tab: "resumen" },
   };
 
   // Pestañas de la vista cliente en project.html — agrupan los bloques
@@ -821,6 +832,12 @@ const RS = (() => {
       fields: [{ key: "value", label: "Objetivo", type: "text" }],
       newItem: () => "",
       itemLabel: (item) => item || "Sin objetivo",
+    },
+    deliverables: {
+      primitive: true,
+      fields: [{ key: "value", label: "Servicio incluido", type: "text" }],
+      newItem: () => "",
+      itemLabel: (item) => item || "Sin descripción",
     },
     pendingMaterial: {
       primitive: true,

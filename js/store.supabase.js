@@ -99,6 +99,10 @@ window.RSStore = (() => {
       calendar: row.calendar || [],
       bitacora: row.bitacora || [],
       upsells: row.upsells || [],
+      // "deliverables" (supabase/09_project_deliverables.sql) puede no
+      // estar aplicada todavía — mismo caso que "market", select("*")
+      // no falla por una columna de menos.
+      deliverables: row.deliverables || [],
       heroSlides: row.hero_slides || [],
       blocks: row.blocks || [],
       _id: row.id,
@@ -147,6 +151,7 @@ window.RSStore = (() => {
       calendar: project.calendar || [],
       bitacora: project.bitacora || [],
       upsells: project.upsells || [],
+      deliverables: project.deliverables || [],
       hero_slides: project.heroSlides || [],
       blocks: project.blocks || [],
     };
@@ -212,22 +217,27 @@ window.RSStore = (() => {
       });
   }
 
-  // "market" (supabase/08_project_market.sql) puede no estar aplicada
-  // todavía en este proyecto de Supabase — no hay que romper el
-  // guardado de TODO el proyecto (nombre, bloques, listas, etc.) por
-  // una sola columna que todavía no existe. Mismo patrón que
-  // listClients()/"archived": si el update/insert falla específicamente
-  // por eso (42703), reintenta sin "market".
-  function upsertProjectRow(row, existingId) {
+  // Columnas de projects que pueden no estar aplicadas todavía en este
+  // proyecto de Supabase (migraciones escritas, no ejecutadas — ver
+  // 08_project_market.sql / 09_project_deliverables.sql). No hay que
+  // romper el guardado de TODO el proyecto (nombre, bloques, listas,
+  // etc.) por una de estas columnas de menos: si el update/insert falla
+  // específicamente por eso (42703), upsertProjectRow() reintenta sin
+  // la que falte, una por una, hasta que funcione o no queden
+  // candidatas — mismo patrón que listClients()/"archived", generalizado
+  // porque ahora puede faltar más de una a la vez.
+  const OPTIONAL_PROJECT_COLUMNS = ["market", "deliverables"];
+
+  function upsertProjectRow(row, existingId, remainingOptional = OPTIONAL_PROJECT_COLUMNS) {
     const query = existingId
       ? client().from("projects").update(row).eq("id", existingId)
       : client().from("projects").insert(row);
     return query.then((res) => {
-      if (res.error && res.error.code === "42703" && "market" in row) {
-        const { market, ...rowWithoutMarket } = row;
-        return existingId
-          ? client().from("projects").update(rowWithoutMarket).eq("id", existingId)
-          : client().from("projects").insert(rowWithoutMarket);
+      if (res.error && res.error.code === "42703" && remainingOptional.length) {
+        const [drop, ...rest] = remainingOptional;
+        if (!(drop in row)) return upsertProjectRow(row, existingId, rest);
+        const { [drop]: _omit, ...rowWithoutDrop } = row;
+        return upsertProjectRow(rowWithoutDrop, existingId, rest);
       }
       return res;
     });

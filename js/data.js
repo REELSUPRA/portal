@@ -43,6 +43,7 @@
 function defaultBlockOrder() {
   return [
     { id: "goals", visible: true },
+    { id: "deliverables", visible: true },
     { id: "roadmap", visible: true },
     { id: "contentPieces", visible: true },
     { id: "calendar", visible: true },
