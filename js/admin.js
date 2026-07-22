@@ -1189,7 +1189,7 @@
 
   function reorderBlocks(draggedId, targetId) {
     const project = currentProject();
-    const blocks = project.blocks;
+    const blocks = RS.ensureProjectBlocks(project);
     const fromIdx = blocks.findIndex((b) => b.id === draggedId);
     const toIdx = blocks.findIndex((b) => b.id === targetId);
     if (fromIdx === -1 || toIdx === -1) return;
@@ -1202,7 +1202,7 @@
 
   function toggleBlockVisibility(blockId) {
     const project = currentProject();
-    const block = project.blocks.find((b) => b.id === blockId);
+    const block = RS.ensureProjectBlocks(project).find((b) => b.id === blockId);
     if (!block) return;
     block.visible = !block.visible;
     RS.renderProjectDetail();

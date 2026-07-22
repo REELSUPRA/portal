@@ -932,11 +932,29 @@ const RS = (() => {
     </section>`;
   }
 
+  // Única fuente de verdad para el orden de bloques de un proyecto. Un
+  // proyecto nuevo (createProject() en store.supabase.js) arranca con
+  // blocks: [] — acá se inicializa UNA vez con el orden por default
+  // (defaultBlockOrder(), definida en data.js: la misma lista que ya
+  // se usaba como semilla, no una nueva) y la asignación queda en
+  // project.blocks — no es un valor calculado aparte que se descarta
+  // después de dibujar. render/reorderBlocks/toggleBlockVisibility
+  // llaman todos a esta misma función, así que siempre trabajan sobre
+  // el mismo array real: cualquier modificación (arrastrar, ocultar)
+  // muta project.blocks directamente y se persiste con el próximo
+  // "Guardar cambios", como cualquier otro campo del proyecto.
+  function ensureProjectBlocks(project) {
+    if (!project.blocks || !project.blocks.length) {
+      project.blocks = defaultBlockOrder();
+    }
+    return project.blocks;
+  }
+
   function renderBlocks(project) {
     const container = document.getElementById("blocksContainer");
     if (!container) return;
     const admin = isAdmin();
-    const blocks = project.blocks && project.blocks.length ? project.blocks : Object.keys(BLOCK_DEFS).map((id) => ({ id, visible: true }));
+    const blocks = ensureProjectBlocks(project);
     const visibleBlocks = blocks.filter((b) => admin || b.visible);
 
     if (admin) {
@@ -996,7 +1014,7 @@ const RS = (() => {
     renderTopbar, renderAnnouncement, renderHero, renderProjectGrid, renderNewsTicker,
     renderProjectDetail, renderBlocks, navigateCalendar,
     getProjectFromURL, hydrateIcons, projectAvatar,
-    bitacoraEntries, bitacoraTimelineHtml,
+    bitacoraEntries, bitacoraTimelineHtml, ensureProjectBlocks,
     BLOCK_DEFS, STATUS_LABEL, THEME_SCHEMA, LIST_SCHEMAS,
   };
 })();
