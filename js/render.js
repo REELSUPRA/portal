@@ -875,6 +875,49 @@ const RS = (() => {
   };
 
   /* ----------------------------------------------------------
+     PRESETS DE ONBOARDING (Fase 3)
+     ---------------------------------------------------------- */
+
+  // Un preset define la estructura INICIAL de un proyecto nuevo —
+  // Objetivos, Roadmap, Próximos pasos, Mejoras y Qué incluye este
+  // proyecto (deliverables), y opcionalmente el orden de bloques.
+  // Deliberadamente NO tiene relación con el Pack contratado
+  // (RS-04/RS-08/RS-12/Personalizado — campo plan/planDetail): son dos
+  // ejes independientes. Un preset tampoco toca sector/audience/
+  // language/market/resources/documents/links/calendar/bitacora/
+  // contentPieces/pendingMaterial — esas claves ni existen en un
+  // preset, así que no hay forma de que se autocompleten por error.
+  //
+  // Mismo espíritu que BLOCK_DEFS/THEME_SCHEMA/LIST_SCHEMAS: sumar un
+  // preset nuevo es agregar una entrada acá, no escribir código. Arranca
+  // solo con "Genérico" (igual al comportamiento actual de crear un
+  // proyecto vacío) — sumar presets con contenido real de ReelSupra es
+  // un paso aparte que no requiere tocar la mecánica.
+  const PROJECT_PRESETS = {
+    generico: {
+      label: "Genérico (sin preset)",
+      goals: [],
+      roadmap: [],
+      nextSteps: [],
+      upsells: [],
+      deliverables: [],
+      blocks: null, // null = usar defaultBlockOrder() vía ensureProjectBlocks(), como hoy
+    },
+  };
+
+  // Devuelve una COPIA profunda del preset elegido — nunca la misma
+  // referencia. Dos proyectos creados con el mismo preset (o el mismo
+  // proyecto reabierto más tarde) nunca deben compartir el array de
+  // roadmap/goals/etc.: editar uno no puede tocar al otro ni al preset
+  // original. structuredClone() ya es nativo en los navegadores que
+  // este proyecto soporta (misma base que DragEvent/DataTransfer del
+  // drag&drop de bloques).
+  function resolveProjectPreset(presetId) {
+    const preset = PROJECT_PRESETS[presetId] || PROJECT_PRESETS.generico;
+    return structuredClone(preset);
+  }
+
+  /* ----------------------------------------------------------
      PROJECT DETAIL PAGE
      ---------------------------------------------------------- */
 
@@ -1033,5 +1076,6 @@ const RS = (() => {
     getProjectFromURL, hydrateIcons, projectAvatar,
     bitacoraEntries, bitacoraTimelineHtml, ensureProjectBlocks,
     BLOCK_DEFS, STATUS_LABEL, THEME_SCHEMA, LIST_SCHEMAS,
+    PROJECT_PRESETS, resolveProjectPreset,
   };
 })();
