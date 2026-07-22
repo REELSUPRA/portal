@@ -236,10 +236,15 @@ const RS = (() => {
       ? `<img src="${esc(data.client.logoUrl)}" alt="" class="brand__logo" />`
       : `<span class="brand__dot"></span>`;
 
-    const left = showBack
-      ? `<a class="back-link" href="index.html">${icon("arrow-left")} Portal</a>`
-      : `<div class="brand">${brandMark}${esc(data.agency.name)}
-           <span class="brand__client">${esc(data.client.name)}</span></div>`;
+    // En modo admin, volver siempre manda al Dashboard de la agencia —
+    // no al botón atrás del navegador ni al portal del cliente (que un
+    // admin editando no necesita ver como destino "hacia atrás").
+    const left = isAdmin()
+      ? `<a class="back-link" href="dashboard.html">${icon("arrow-left")} Volver al Dashboard</a>`
+      : showBack
+        ? `<a class="back-link" href="index.html">${icon("arrow-left")} Portal</a>`
+        : `<div class="brand">${brandMark}${esc(data.agency.name)}
+             <span class="brand__client">${esc(data.client.name)}</span></div>`;
 
     const adminBadge = isAdmin()
       ? `<span class="admin-mode-badge">${icon("move")} ${showBack ? "Modo administrador — arrastrá los bloques para reordenar" : "Modo administrador activo"}</span>`
