@@ -1018,6 +1018,9 @@
       const projectGroup = collapsibleGroup(`Proyecto ${i + 1} — ${p.name}`, { open: i === 0 });
       projectGroup.bodyEl.appendChild(field("Nombre del proyecto", p.name, (v) => (p.name = v)));
       projectGroup.bodyEl.appendChild(field("Estado (texto visible)", p.status, (v) => (p.status = v)));
+      projectGroup.bodyEl.appendChild(field("Pack contratado (código)", p.plan, (v) => (p.plan = v)));
+      projectGroup.bodyEl.appendChild(field("Pack contratado (detalle)", p.planDetail, (v) => (p.planDetail = v)));
+      projectGroup.bodyEl.appendChild(field("Idioma", p.language, (v) => (p.language = v)));
       projectGroup.bodyEl.appendChild(field("Objetivo", p.objective, (v) => (p.objective = v), true));
       projectGroup.bodyEl.appendChild(buildContentListButtons(p));
       body.appendChild(projectGroup.details);

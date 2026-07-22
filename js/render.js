@@ -785,6 +785,12 @@ const RS = (() => {
       newItem: () => ({ label: "", url: "" }),
       itemLabel: (item) => item.label || "Nuevo documento",
     },
+    goals: {
+      primitive: true,
+      fields: [{ key: "value", label: "Objetivo", type: "text" }],
+      newItem: () => "",
+      itemLabel: (item) => item || "Sin objetivo",
+    },
     pendingMaterial: {
       primitive: true,
       fields: [{ key: "value", label: "Descripción", type: "text" }],
