@@ -222,10 +222,22 @@ window.RSStore = (() => {
   // 08_project_market.sql / 09_project_deliverables.sql). No hay que
   // romper el guardado de TODO el proyecto (nombre, bloques, listas,
   // etc.) por una de estas columnas de menos: si el update/insert falla
-  // específicamente por eso (42703), upsertProjectRow() reintenta sin
-  // la que falte, una por una, hasta que funcione o no queden
-  // candidatas — mismo patrón que listClients()/"archived", generalizado
-  // porque ahora puede faltar más de una a la vez.
+  // específicamente por eso, upsertProjectRow() reintenta sin la que
+  // falte, una por una, hasta que funcione o no queden candidatas —
+  // mismo patrón que listClients()/"archived", generalizado porque
+  // ahora puede faltar más de una a la vez.
+  //
+  // Dos códigos de error distintos para "columna inexistente", según
+  // el camino que toma PostgREST — confirmado contra el proyecto real
+  // antes de asumir cuál era (bug real: el código original solo
+  // contemplaba 42703 y por eso NINGÚN guardado de proyecto funcionaba
+  // mientras faltaran estas columnas):
+  //   - 42703: error crudo de Postgres — ocurre cuando una columna
+  //     nombrada en un SELECT no existe (ver listClients()).
+  //   - PGRST204: PostgREST la detecta ANTES de llegar a Postgres,
+  //     validando el body de un INSERT/UPDATE contra su schema cache —
+  //     es el código real para este caso (guardar un proyecto).
+  const MISSING_COLUMN_ERROR_CODES = ["42703", "PGRST204"];
   const OPTIONAL_PROJECT_COLUMNS = ["market", "deliverables"];
 
   // .select().single() siempre encadenado: save() no usa la fila
@@ -237,7 +249,7 @@ window.RSStore = (() => {
       ? client().from("projects").update(row).eq("id", existingId).select().single()
       : client().from("projects").insert(row).select().single();
     return query.then((res) => {
-      if (res.error && res.error.code === "42703" && remainingOptional.length) {
+      if (res.error && MISSING_COLUMN_ERROR_CODES.includes(res.error.code) && remainingOptional.length) {
         const [drop, ...rest] = remainingOptional;
         if (!(drop in row)) return upsertProjectRow(row, existingId, rest);
         const { [drop]: _omit, ...rowWithoutDrop } = row;
