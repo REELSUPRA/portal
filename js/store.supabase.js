@@ -79,6 +79,10 @@ window.RSStore = (() => {
       sector: row.sector,
       language: row.language,
       audience: row.audience,
+      // "market" (supabase/08_project_market.sql) puede no estar
+      // aplicada todavía — select("*") no falla por una columna de
+      // menos, así que esto es seguro incluso antes de esa migración.
+      market: row.market,
       plan: row.plan,
       planDetail: row.plan_detail,
       status: row.status,
@@ -126,6 +130,7 @@ window.RSStore = (() => {
       sector: project.sector,
       language: project.language,
       audience: project.audience,
+      market: project.market,
       plan: project.plan,
       plan_detail: project.planDetail,
       status: project.status,
@@ -207,6 +212,27 @@ window.RSStore = (() => {
       });
   }
 
+  // "market" (supabase/08_project_market.sql) puede no estar aplicada
+  // todavía en este proyecto de Supabase — no hay que romper el
+  // guardado de TODO el proyecto (nombre, bloques, listas, etc.) por
+  // una sola columna que todavía no existe. Mismo patrón que
+  // listClients()/"archived": si el update/insert falla específicamente
+  // por eso (42703), reintenta sin "market".
+  function upsertProjectRow(row, existingId) {
+    const query = existingId
+      ? client().from("projects").update(row).eq("id", existingId)
+      : client().from("projects").insert(row);
+    return query.then((res) => {
+      if (res.error && res.error.code === "42703" && "market" in row) {
+        const { market, ...rowWithoutMarket } = row;
+        return existingId
+          ? client().from("projects").update(rowWithoutMarket).eq("id", existingId)
+          : client().from("projects").insert(rowWithoutMarket);
+      }
+      return res;
+    });
+  }
+
   function save(data) {
     const clientId = data.client._id; // seteado por hydrate() al cargar
     if (!clientId) {
@@ -220,13 +246,7 @@ window.RSStore = (() => {
     const updateClient = client().from("clients").update(clientRow).eq("id", clientId);
 
     const upsertProjects = Promise.all(
-      (data.projects || []).map((p) => {
-        const row = projectToRow(p, clientId);
-        if (p._id) {
-          return client().from("projects").update(row).eq("id", p._id);
-        }
-        return client().from("projects").insert(row);
-      })
+      (data.projects || []).map((p) => upsertProjectRow(projectToRow(p, clientId), p._id))
     );
 
     return Promise.all([updateClient, upsertProjects])

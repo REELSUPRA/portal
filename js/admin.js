@@ -1018,10 +1018,25 @@
       const projectGroup = collapsibleGroup(`Proyecto ${i + 1} — ${p.name}`, { open: i === 0 });
       projectGroup.bodyEl.appendChild(field("Nombre del proyecto", p.name, (v) => (p.name = v)));
       projectGroup.bodyEl.appendChild(field("Estado (texto visible)", p.status, (v) => (p.status = v)));
+
+      // Sector/Idioma/Público/Mercado ya viven en projects (no en
+      // clients) — un mismo cliente puede tener proyectos en mercados
+      // distintos (ej. Juan Guzmán: closets en EE.UU. vs. real estate
+      // en Florida, sector/idioma/público ya difieren hoy entre sus 2
+      // proyectos reales). Se agrupan visualmente acá como
+      // "Información estratégica" para separarlas del pack/objetivo,
+      // sin mover el dato de tabla.
+      projectGroup.bodyEl.appendChild(groupTitle("Información estratégica"));
+      projectGroup.bodyEl.appendChild(field("Sector / Industria", p.sector, (v) => (p.sector = v)));
+      projectGroup.bodyEl.appendChild(field("Público objetivo", p.audience, (v) => (p.audience = v)));
+      projectGroup.bodyEl.appendChild(field("Idioma", p.language, (v) => (p.language = v)));
+      projectGroup.bodyEl.appendChild(field("Mercado / Ubicación", p.market, (v) => (p.market = v)));
+
+      projectGroup.bodyEl.appendChild(groupTitle("Pack y objetivo"));
       projectGroup.bodyEl.appendChild(field("Pack contratado (código)", p.plan, (v) => (p.plan = v)));
       projectGroup.bodyEl.appendChild(field("Pack contratado (detalle)", p.planDetail, (v) => (p.planDetail = v)));
-      projectGroup.bodyEl.appendChild(field("Idioma", p.language, (v) => (p.language = v)));
       projectGroup.bodyEl.appendChild(field("Objetivo", p.objective, (v) => (p.objective = v), true));
+
       projectGroup.bodyEl.appendChild(buildContentListButtons(p));
       body.appendChild(projectGroup.details);
     });
