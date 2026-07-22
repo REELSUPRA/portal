@@ -332,6 +332,62 @@ button {
   color: var(--rs-gray-500);
 }
 
+/* Ticker de novedades del Dashboard de bienvenida (ajuste posterior a
+   Fase 2) — reemplaza al listado/timeline de bitácora agregada: una
+   sola línea que se desplaza sola, sin ocupar espacio vertical. El
+   contenido viene duplicado una vez en el HTML (ver renderNewsTicker())
+   para que el loop de la animación no se note al cerrar el círculo. */
+.news-ticker {
+  overflow: hidden;
+  border: 1px solid var(--rs-gray-100);
+  border-radius: var(--radius-lg);
+  background: var(--rs-card);
+  padding: var(--space-3) 0;
+}
+
+.news-ticker__track {
+  display: flex;
+  width: max-content;
+  gap: var(--space-10);
+  animation: news-ticker-scroll 30s linear infinite;
+}
+
+.news-ticker:hover .news-ticker__track {
+  animation-play-state: paused;
+}
+
+.news-ticker__item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  padding: 0 var(--space-6);
+  font-size: 13.5px;
+  color: var(--rs-gray-500);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.news-ticker__item:hover {
+  color: var(--rs-black);
+}
+
+.news-ticker__item strong {
+  color: var(--rs-black);
+  font-weight: 700;
+}
+
+.news-ticker__item .icon {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+@keyframes news-ticker-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
 /* ============================================================
    PROJECT CARDS (index)
    ============================================================ */

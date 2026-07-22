@@ -49,7 +49,8 @@
   <script src="js/admin.js"></script>
   <script>
     function boot() {
-      RSStore.hydrate()
+      const projectId = new URLSearchParams(window.location.search).get("id");
+      RSStore.hydrate(RSStore.loadProjectPortal(projectId))
         .then(() => {
           RS.applyTheme();
           RS.applyBranding();

@@ -28,24 +28,35 @@
 
   <div id="announcement" class="announcement"></div>
 
-  <header id="topbar" class="topbar"></header>
+  <header id="topbar" class="topbar">
+    <div class="topbar__inner">
+      <div class="brand">ReelSupra</div>
+    </div>
+  </header>
 
   <main class="shell">
-    <section id="hero" class="hero"></section>
+    <div id="loginGate" class="dashboard-gate" style="display:none;">
+      <p>Iniciá sesión para ver tu portal.</p>
+      <button class="btn btn--primary" id="loginGateBtn">Iniciar sesión</button>
+    </div>
 
-    <section id="recentActivitySection" class="section" style="display:none;">
-      <div class="section__head">
-        <span class="section__title">Últimas novedades</span>
-      </div>
-      <div id="recentActivity"></div>
-    </section>
+    <div id="portalApp" style="display:none;">
+      <section id="hero" class="hero"></section>
 
-    <section class="section">
-      <div class="section__head">
-        <span class="section__title">Tus proyectos</span>
-      </div>
-      <div id="projectGrid" class="project-grid stagger"></div>
-    </section>
+      <section id="newsTickerSection" class="section" style="display:none;">
+        <div class="section__head">
+          <span class="section__title">Últimas novedades</span>
+        </div>
+        <div id="newsTicker"></div>
+      </section>
+
+      <section class="section">
+        <div class="section__head">
+          <span class="section__title">Tus proyectos</span>
+        </div>
+        <div id="projectGrid" class="project-grid stagger"></div>
+      </section>
+    </div>
   </main>
 
   <footer class="footer">
@@ -63,24 +74,51 @@
   <script src="js/render.js"></script>
   <script src="js/admin.js"></script>
   <script>
-    function boot() {
-      RSStore.hydrate()
+    function removeLoadingOverlay() {
+      const loadingEl = document.getElementById("portalLoading");
+      if (loadingEl) loadingEl.remove();
+    }
+
+    // Puerta única (Fase 2, Parte F): sin sesión y sin ?client= en la
+    // URL, no hay ningún "cliente demo" por default — se pide login.
+    function showLoginGate() {
+      removeLoadingOverlay();
+      document.getElementById("loginGate").style.display = "flex";
+      document.getElementById("loginGateBtn").addEventListener("click", () => {
+        RSAdmin.tryActivateAdmin().then((isAdmin) => {
+          // Login de cliente: el propio modal ya redirige a index.html
+          // (sin slug) — acá solo hace falta resolver el caso admin.
+          if (isAdmin) window.location.replace("dashboard.html");
+        });
+      });
+    }
+
+    function bootPortal(slug) {
+      RSStore.hydrate(RSStore.load(slug))
         .then(() => {
           RS.applyTheme();
           RS.applyBranding();
           return RSAdmin.detectAdminMode(); // async: puede esperar un login real
         })
         .then(() => {
+          document.getElementById("portalApp").style.display = "block";
           RS.renderTopbar({ showBack: false });
           RS.renderAnnouncement();
           RS.renderHero();
-          RS.renderRecentActivity();
+          RS.renderNewsTicker();
           RS.renderProjectGrid();
           RS.hydrateIcons();
           RSAdmin.init();
-          const loadingEl = document.getElementById("portalLoading");
-          if (loadingEl) loadingEl.remove();
+          removeLoadingOverlay();
         });
+    }
+
+    function boot() {
+      RSStore.resolveClientAccess().then((access) => {
+        if (access.role === "admin") { window.location.replace("dashboard.html"); return; }
+        if (!access.slug) { showLoginGate(); return; }
+        bootPortal(access.slug);
+      });
     }
     document.addEventListener("DOMContentLoaded", boot);
   </script>

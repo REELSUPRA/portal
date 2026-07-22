@@ -303,24 +303,6 @@ const RS = (() => {
      INDEX PAGE
      ---------------------------------------------------------- */
 
-  // Accesos rápidos del "Dashboard de bienvenida" (Fase 2, Parte C):
-  // no hay un client-level "links" en el schema (viven por proyecto),
-  // así que se juntan los de todos los proyectos del cliente,
-  // deduplicados por URL — mismo componente visual que ya usa el
-  // Smart Header de project.html (quickLinksRow), sin CSS/JS nuevo.
-  function clientQuickLinks(data) {
-    const seen = new Set();
-    const links = [];
-    (data.projects || []).forEach((p) => {
-      (p.links || []).forEach((l) => {
-        if (!l.url || seen.has(l.url)) return;
-        seen.add(l.url);
-        links.push(l);
-      });
-    });
-    return links;
-  }
-
   function renderHero() {
     const data = window.CLIENT_DATA;
     const el = document.getElementById("hero");
@@ -336,12 +318,14 @@ const RS = (() => {
         ? `<div class="hero__cover hero__cover--empty">${coverEditBtn}</div>`
         : "";
 
+    // Dashboard de bienvenida mínimo (Fase 2, ajuste): solo bienvenida +
+    // ticker + tarjetas de proyecto — sin accesos rápidos agregados acá
+    // (se mudaron a cada tarjeta de proyecto, ver renderProjectGrid()).
     el.innerHTML = `
       ${cover}
       <div class="hero__eyebrow">Portal del cliente</div>
       <h1 class="hero__title">Bienvenido, ${esc(data.client.name)} ${data.client.greetingEmoji || ""}</h1>
-      <p class="hero__message">${esc(data.client.welcomeMessage)}</p>
-      ${quickLinksRow(clientQuickLinks(data))}`;
+      <p class="hero__message">${esc(data.client.welcomeMessage)}</p>`;
   }
 
   function projectAvatar(p, size = 26) {
@@ -377,6 +361,7 @@ const RS = (() => {
           <span class="status-badge__dot"></span>${esc(STATUS_LABEL[tone] || p.status)}
         </span>
         ${total ? progressBar(percent, "sm") : ""}
+        ${quickLinksRow(p.links)}
         <div class="project-card__footer">
           <a class="btn btn--primary" href="project.html?id=${encodeURIComponent(p.id)}">
             Ingresar al proyecto ${icon("arrow-right")}
@@ -386,14 +371,16 @@ const RS = (() => {
     }).join("");
   }
 
-  const RECENT_ACTIVITY_LIMIT = 5;
+  const NEWS_TICKER_LIMIT = 15;
 
   // Novedades recientes de TODOS los proyectos del cliente, para el
-  // Dashboard de bienvenida (Fase 2, Parte C) — se calculan acá en vez
-  // de traerlas con una consulta aparte porque load() ya trajo todos
-  // los proyectos del cliente (con su bitácora) para pintar projectGrid;
-  // reusar eso en memoria es más simple que un round-trip nuevo.
-  function clientRecentActivity(limit = RECENT_ACTIVITY_LIMIT) {
+  // ticker del Dashboard de bienvenida — se calculan acá en vez de
+  // traerlas con una consulta aparte porque load() ya trajo todos los
+  // proyectos del cliente (con su bitácora) para pintar projectGrid;
+  // reusar eso en memoria es más simple que un round-trip nuevo. Límite
+  // más generoso que un listado (15, no 5): es gratis en bandwidth y un
+  // ticker con pocos ítems se siente corto/repetitivo.
+  function clientRecentActivity(limit = NEWS_TICKER_LIMIT) {
     const data = window.CLIENT_DATA;
     const entries = [];
     (data.projects || []).forEach((p) => {
@@ -403,9 +390,15 @@ const RS = (() => {
     return entries.slice(0, limit);
   }
 
-  function renderRecentActivity() {
-    const section = document.getElementById("recentActivitySection");
-    const el = document.getElementById("recentActivity");
+  // Ticker horizontal tipo noticiero (Fase 2, ajuste): la bitácora
+  // agregada del cliente ya NO se muestra como lista/timeline — se
+  // desplaza sola, en una sola línea, ocupando poco espacio. El
+  // contenido se duplica una vez para que el loop de la animación CSS
+  // (news-ticker-scroll, ver css/styles.css) no se note al cerrar el
+  // círculo.
+  function renderNewsTicker() {
+    const section = document.getElementById("newsTickerSection");
+    const el = document.getElementById("newsTicker");
     if (!section || !el) return;
 
     const entries = clientRecentActivity();
@@ -414,15 +407,20 @@ const RS = (() => {
       return;
     }
     section.style.display = "";
-    el.innerHTML = `<div class="roadmap">${entries.map((e) => {
+
+    const itemHtml = (e) => {
       const type = BITACORA_TYPE[e.type] ? e.type : "note";
-      return `
-      <a class="roadmap__item roadmap__item--${type} roadmap__item--link" href="project.html?id=${encodeURIComponent(e.projectId)}">
-        <span class="roadmap__dot"></span>
-        <div class="roadmap__phase">${icon(BITACORA_TYPE[type].icon)}${esc(e.text)}</div>
-        <span class="roadmap__tag">${esc(e.projectName)} · ${esc(formatDateHuman(e.dateObj))}</span>
+      return `<a class="news-ticker__item" href="project.html?id=${encodeURIComponent(e.projectId)}">
+        ${icon(BITACORA_TYPE[type].icon)}<strong>[${esc(e.projectName)}]</strong> ${esc(e.text)}
       </a>`;
-    }).join("")}</div>`;
+    };
+
+    el.innerHTML = `<div class="news-ticker">
+      <div class="news-ticker__track">
+        ${entries.map(itemHtml).join("")}
+        ${entries.map(itemHtml).join("")}
+      </div>
+    </div>`;
   }
 
   /* ----------------------------------------------------------
@@ -700,9 +698,9 @@ const RS = (() => {
   // con drag&drop), ni el editor genérico de listas.
   const BLOCK_DEFS = {
     goals: { title: "Objetivos", icon: "target", render: blockGoals, tab: "resumen" },
-    roadmap: { title: "Hoja de ruta", icon: "git-branch", render: blockRoadmap, tab: "planificacion" },
-    contentPieces: { title: "Piezas de contenido", icon: "film", render: blockContentPieces, tab: "planificacion" },
-    calendar: { title: "Calendario", icon: "calendar", render: blockCalendar, tab: "planificacion" },
+    roadmap: { title: "Hoja de ruta", icon: "git-branch", render: blockRoadmap, tab: "trabajo" },
+    contentPieces: { title: "Piezas de contenido", icon: "film", render: blockContentPieces, tab: "trabajo" },
+    calendar: { title: "Calendario", icon: "calendar", render: blockCalendar, tab: "trabajo" },
     nextSteps: { title: "Próximos pasos", icon: "arrow-right-circle", render: blockNextSteps, tab: "resumen" },
     pendingMaterial: { title: "Material pendiente", icon: "hourglass", render: blockPending, tab: "resumen" },
     resources: { title: "Recursos", icon: "bookmark", render: blockResources, tab: "recursos" },
@@ -712,19 +710,19 @@ const RS = (() => {
     // rápidos. Se deja la entrada acá porque el editor genérico de
     // listas (RS.LIST_SCHEMAS) lee título/ícono de este registro.
     links: { title: "Accesos rápidos", icon: "zap", render: blockLinks, tab: "recursos" },
-    bitacora: { title: "Bitácora", icon: "notebook-pen", render: blockBitacora, tab: "actividad" },
+    bitacora: { title: "Bitácora", icon: "notebook-pen", render: blockBitacora, tab: "trabajo" },
     upsells: { title: "Mejoras disponibles", icon: "sparkles", render: blockUpsells, tab: "resumen" },
   };
 
-  // Pestañas de la vista cliente en project.html (Fase 2, Parte E) —
-  // agrupan los bloques de BLOCK_DEFS por su campo "tab" para reducir
-  // el scroll. Orden fijo; una pestaña sin bloques visibles no se
-  // muestra (ver renderBlocks()).
+  // Pestañas de la vista cliente en project.html — agrupan los bloques
+  // de BLOCK_DEFS por su campo "tab" para reducir el scroll. Reducidas
+  // de 4 a 3 (ajuste posterior a Fase 2): "Trabajo" une lo que antes
+  // eran "Planificación" y "Actividad" (bitácora incluida). Orden fijo;
+  // una pestaña sin bloques visibles no se muestra (ver renderBlocks()).
   const PROJECT_TABS = [
     { id: "resumen", label: "Resumen", icon: "layout-dashboard" },
-    { id: "planificacion", label: "Planificación", icon: "git-branch" },
+    { id: "trabajo", label: "Trabajo", icon: "briefcase" },
     { id: "recursos", label: "Recursos", icon: "bookmark" },
-    { id: "actividad", label: "Actividad", icon: "notebook-pen" },
   ];
 
   // Pestaña activa en project.html — se conserva entre renders (ej. al
@@ -958,7 +956,7 @@ const RS = (() => {
 
   return {
     esc, icon, isAdmin, applyTheme, applyBranding,
-    renderTopbar, renderAnnouncement, renderHero, renderProjectGrid, renderRecentActivity,
+    renderTopbar, renderAnnouncement, renderHero, renderProjectGrid, renderNewsTicker,
     renderProjectDetail, renderBlocks, navigateCalendar,
     getProjectFromURL, hydrateIcons, projectAvatar,
     bitacoraEntries, bitacoraTimelineHtml,

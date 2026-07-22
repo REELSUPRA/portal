@@ -154,7 +154,10 @@
           if (access.role === "admin") { closeLoginModal(true); return; }
           if (access.role === "client" && access.slug) {
             closeLoginModal(false);
-            window.location.href = `index.html?client=${encodeURIComponent(access.slug)}`;
+            // Puerta única (Fase 2, Parte F): sin slug en la URL — al
+            // recargar, resolveClientAccess() encuentra la sesión y
+            // entra directo a su portal.
+            window.location.href = "index.html";
             return;
           }
           RSStore.signOut().then(() => showToast("Esta cuenta no tiene acceso configurado", "error"));
@@ -214,7 +217,7 @@
 
   function refreshPage() {
     RS.renderTopbar({ showBack: !!document.getElementById("projectHero") });
-    if (document.getElementById("hero")) { RS.renderHero(); RS.renderRecentActivity(); RS.renderProjectGrid(); }
+    if (document.getElementById("hero")) { RS.renderHero(); RS.renderNewsTicker(); RS.renderProjectGrid(); }
     if (document.getElementById("projectHero")) RS.renderProjectDetail();
     RS.renderAnnouncement();
     RS.hydrateIcons();

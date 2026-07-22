@@ -191,8 +191,14 @@
   searchInput.addEventListener("input", renderFilteredList);
   showArchivedToggle.addEventListener("change", renderFilteredList);
 
+  // Puerta única (Fase 2, Parte F): el Dashboard de la agencia es solo
+  // para admins — un cliente logueado (sesión válida, pero no admin)
+  // nunca debería quedarse acá, va a su propio Dashboard en index.html.
   RSStore.getSession().then((hasSession) => {
-    if (hasSession) showApp();
-    else login();
+    if (!hasSession) { login(); return; }
+    RSStore.isCurrentUserAdmin().then((isAdmin) => {
+      if (isAdmin) showApp();
+      else window.location.replace("index.html");
+    });
   });
 })();

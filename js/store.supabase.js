@@ -30,13 +30,6 @@ window.RSStore = (() => {
   const SUPABASE_URL = "https://oilfbkzzussozisjmemw.supabase.co";
   const SUPABASE_ANON_KEY = "sb_publishable_9f6zu5ZlxGt0d4o1ifFFFg_C85X2B9j";
 
-  // Qué cliente mostrar cuando la URL no especifica ?client=<slug>.
-  // Con un solo cliente real hoy (Juan Guzmán), esto mantiene el
-  // link actual (portalreelsupra.netlify.app/, sin parámetros)
-  // funcionando exactamente igual que ahora. El día que haya un
-  // segundo cliente, cada uno recibe su propio link con ?client=.
-  const DEFAULT_CLIENT_SLUG = "juan-guzman";
-
   let _client = null;
   function client() {
     if (_client) return _client;
@@ -48,11 +41,6 @@ window.RSStore = (() => {
     }
     _client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     return _client;
-  }
-
-  function currentClientSlug() {
-    const params = new URLSearchParams(window.location.search);
-    return params.get("client") || DEFAULT_CLIENT_SLUG;
   }
 
   // ---- mapeo DB (snake_case) <-> CLIENT_DATA (camelCase) ----
@@ -161,11 +149,19 @@ window.RSStore = (() => {
 
   // ---- interfaz pública, igual a js/store.js ----
 
-  function load() {
-    const slug = currentClientSlug();
+  // Agencia + un cliente (por slug o por id) + todos sus proyectos —
+  // misma forma que necesitan tanto load() (index.html, ya sabe el
+  // slug) como loadProjectPortal() (project.html, solo sabe el
+  // client_id de su propio proyecto). Único lugar que arma este bundle,
+  // para no duplicar la lógica entre los dos.
+  function fetchClientBundle({ slug, id }) {
+    const clientQuery = slug
+      ? client().from("clients").select("*").eq("slug", slug).single()
+      : client().from("clients").select("*").eq("id", id).single();
+
     return Promise.all([
       client().from("agency_settings").select("*").eq("id", true).single(),
-      client().from("clients").select("*").eq("slug", slug).single(),
+      clientQuery,
     ]).then(([agencyRes, clientRes]) => {
       if (agencyRes.error) throw agencyRes.error;
       if (clientRes.error) throw clientRes.error;
@@ -188,14 +184,38 @@ window.RSStore = (() => {
     });
   }
 
+  // index.html: el slug ya se resolvió antes (ver resolveClientAccess()
+  // más abajo), sea por ?client=<slug> o por la sesión del cliente.
+  function load(slug) {
+    return fetchClientBundle({ slug });
+  }
+
+  // project.html: no necesita (ni adivina) el slug del cliente — busca
+  // el proyecto por su propio slug, y de ahí sale el client_id real.
+  // Antes de esto, project.html dependía de un ?client=<slug> que los
+  // links del Dashboard nunca mandaban — con un solo cliente real pasaba
+  // desapercibido, con más de uno mostraba el proyecto equivocado.
+  function loadProjectPortal(projectSlug) {
+    return client()
+      .from("projects")
+      .select("client_id")
+      .eq("slug", projectSlug)
+      .single()
+      .then(({ data, error }) => {
+        if (error) throw error;
+        return fetchClientBundle({ id: data.client_id });
+      });
+  }
+
   function save(data) {
-    const slug = currentClientSlug();
     const clientId = data.client._id; // seteado por hydrate() al cargar
     if (!clientId) {
       return Promise.resolve(false); // no debería pasar si hydrate() corrió antes
     }
 
-    const clientRow = clientToRow(data.client, slug, data.announcement);
+    // data.client._slug (rowToClient) en vez de recomputar el slug por
+    // URL/sesión — así save() no depende de cómo se llegó a esta página.
+    const clientRow = clientToRow(data.client, data.client._slug, data.announcement);
 
     const updateClient = client().from("clients").update(clientRow).eq("id", clientId);
 
@@ -230,8 +250,12 @@ window.RSStore = (() => {
     return Promise.resolve();
   }
 
-  function hydrate() {
-    return load()
+  // Recibe la promesa de carga ya armada (RSStore.load(slug) o
+  // RSStore.loadProjectPortal(id)) en vez de decidir acá qué cargar —
+  // así el mismo try/catch + fallback a data.js sirve para index.html
+  // y project.html por igual.
+  function hydrate(loadPromise) {
+    return loadPromise
       .then((data) => {
         window.CLIENT_DATA = data;
       })
@@ -482,9 +506,20 @@ window.RSStore = (() => {
       .catch(() => ({ role: null }));
   }
 
+  // Puerta única (Fase 2, Parte F): index.html ya no depende de
+  // ?client=<slug> para el caso normal. Si viene explícito en la URL
+  // (links internos del Dashboard: "Entrar"/"Vista previa"), se
+  // respeta tal cual; si no, se resuelve por sesión — admin, cliente
+  // (con su slug) o nadie (visitante anónimo, sin sesión).
+  function resolveClientAccess() {
+    const explicitSlug = new URLSearchParams(window.location.search).get("client");
+    if (explicitSlug) return Promise.resolve({ role: null, slug: explicitSlug });
+    return getCurrentUserAccess();
+  }
+
   return {
-    load, save, clear, hydrate,
-    signIn, signOut, getSession, isCurrentUserAdmin, getCurrentUserAccess,
+    load, loadProjectPortal, save, clear, hydrate,
+    signIn, signOut, getSession, isCurrentUserAdmin, getCurrentUserAccess, resolveClientAccess,
     listClients, listProjectsLight, createClient, createProject, manageAccess, uploadImage,
     updateClientBasic, setClientArchived,
   };
