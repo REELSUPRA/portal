@@ -33,6 +33,13 @@
     </div>
 
     <div id="app" class="dashboard-app" style="display:none;">
+      <section id="attentionFeed" class="dashboard-attention" style="display:none;">
+        <div class="section__head">
+          <span class="section__title">Necesita atención</span>
+        </div>
+        <div id="attentionFeedList"></div>
+      </section>
+
       <div class="dashboard-toolbar">
         <input type="search" id="clientSearchInput" class="dashboard-search" placeholder="Buscar cliente por nombre o slug..." />
         <label class="dashboard-archived-toggle">

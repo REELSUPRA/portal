@@ -423,13 +423,22 @@ window.RSStore = (() => {
   }
 
   // Lista liviana de TODOS los proyectos, para el Dashboard — a
-  // propósito sin los campos jsonb pesados (goals/roadmap/etc): con
-  // cientos de clientes, traer todo el contenido de todos los
+  // propósito sin los campos jsonb más pesados (goals/roadmap/
+  // resources/documents/links/upsells/deliverables/blocks/hero_slides):
+  // con cientos de clientes, traer TODO el contenido de todos los
   // proyectos solo para listarlos sería desperdiciar ancho de banda.
+  //
+  // content_pieces/calendar/bitacora SÍ se incluyen — alimentan el feed
+  // de "qué necesita atención" del Dashboard (piezas atrasadas/próximas,
+  // reuniones próximas, actividad reciente), calculado en dashboard.js
+  // sobre esta misma consulta en vez de agregar una segunda. A la
+  // escala actual (2 clientes) es gratis; si "cientos de clientes"
+  // lo vuelve pesado en el futuro, la evolución natural es resolver
+  // esto con una vista/función SQL — no hace falta construirla ahora.
   function listProjectsLight() {
     return client()
       .from("projects")
-      .select("id, slug, name, client_id, status")
+      .select("id, slug, name, client_id, status, content_pieces, calendar, bitacora")
       .order("name", { ascending: true })
       .then(({ data, error }) => {
         if (error) throw error;

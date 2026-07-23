@@ -29,6 +29,12 @@
   let allClients = [];
   let allProjects = [];
 
+  // Feed de "qué necesita atención" (Fase 3, Módulo 3) — umbrales
+  // fáciles de ajustar después de verlo funcionar con datos reales.
+  const ATTENTION_SOON_DAYS = 7;
+  const ATTENTION_STALE_DAYS = 14;
+  const ATTENTION_MAX_ITEMS = 8;
+
   function showGate() {
     gateEl.style.display = "flex";
     appEl.style.display = "none";
@@ -99,16 +105,126 @@
     };
   }
 
+  // Días desde la última novedad de bitácora de CUALQUIERA de los
+  // proyectos del cliente — reutiliza RS.bitacoraEntries() (ya ordena
+  // por fecha) tal cual, solo que juntando todos los proyectos del
+  // cliente en vez de uno solo. Un único cálculo, usado tanto por el
+  // badge de cada card como por el feed de atención — no hay dos
+  // versiones de "cuán reciente es la actividad de este cliente".
+  function daysSinceLastActivity(clientRow, projects) {
+    const entries = [];
+    projects.forEach((p) => RS.bitacoraEntries(p).forEach((e) => entries.push(e)));
+    entries.sort((a, b) => b.dateObj - a.dateObj);
+    if (!entries.length) return null; // null = nunca hubo actividad
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    return Math.floor((today - entries[0].dateObj) / 86400000);
+  }
+
+  // Ítems de "necesita atención" para un cliente puntual + sus
+  // proyectos — usado por computeAttentionItems() (feed de arriba) y
+  // reutilizable si en el futuro se necesita el mismo cálculo en otro
+  // lugar (ej. el panel por-cliente).
+  function clientAttentionItems(clientRow, projects) {
+    const items = [];
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const soon = new Date(today); soon.setDate(soon.getDate() + ATTENTION_SOON_DAYS);
+
+    projects.forEach((p) => {
+      (p.content_pieces || []).forEach((piece) => {
+        if (piece.status === "delivered" || !piece.publishDate) return;
+        const date = new Date(piece.publishDate + "T00:00:00");
+        if (Number.isNaN(date.getTime())) return;
+        const title = piece.title || "Pieza sin título";
+        if (date < today) {
+          items.push({ type: "pieza-atrasada", priority: 0, text: `"${title}" está atrasada — ${p.name}`, href: `project.html?id=${encodeURIComponent(p.slug)}&admin=true` });
+        } else if (date <= soon) {
+          items.push({ type: "pieza-proxima", priority: 1, text: `"${title}" publica pronto — ${p.name}`, href: `project.html?id=${encodeURIComponent(p.slug)}&admin=true` });
+        }
+      });
+
+      (p.calendar || []).forEach((evt) => {
+        const date = new Date(evt.date + "T00:00:00");
+        if (Number.isNaN(date.getTime()) || date < today || date > soon) return;
+        items.push({ type: "reunion-proxima", priority: 2, text: `${evt.label} — ${p.name}`, href: `project.html?id=${encodeURIComponent(p.slug)}&admin=true` });
+      });
+    });
+
+    if (clientRow.portal_access_status === "sin_invitar") {
+      items.push({ type: "sin-invitar", priority: 3, text: `${clientRow.name} todavía no tiene acceso al portal`, href: `#client-card-${encodeURIComponent(clientRow.slug)}` });
+    }
+
+    const days = daysSinceLastActivity(clientRow, projects);
+    if (days === null || days >= ATTENTION_STALE_DAYS) {
+      const text = days === null
+        ? `${clientRow.name} nunca tuvo novedades en la bitácora`
+        : `${clientRow.name} sin novedades hace ${days} días`;
+      items.push({ type: "sin-actividad", priority: 4, text, href: `#client-card-${encodeURIComponent(clientRow.slug)}` });
+    }
+
+    return items;
+  }
+
+  // Junta los ítems de todos los clientes (no archivados), ordena por
+  // urgencia y listo — se calcula una sola vez por carga del Dashboard,
+  // no depende del buscador ni de "Ver archivados".
+  function computeAttentionItems(clients, projects) {
+    const items = [];
+    clients.forEach((c) => {
+      if (c.archived) return;
+      const ownProjects = projects.filter((p) => p.client_id === c.id);
+      clientAttentionItems(c, ownProjects).forEach((item) => items.push(item));
+    });
+    items.sort((a, b) => a.priority - b.priority);
+    return items;
+  }
+
+  const ATTENTION_ICONS = {
+    "pieza-atrasada": "alert-triangle",
+    "pieza-proxima": "clock",
+    "reunion-proxima": "calendar",
+    "sin-invitar": "user-x",
+    "sin-actividad": "moon",
+  };
+
+  function renderAttentionFeed(items) {
+    const section = document.getElementById("attentionFeed");
+    const list = document.getElementById("attentionFeedList");
+    if (!items.length) { section.style.display = "none"; return; }
+    section.style.display = "";
+
+    const shown = items.slice(0, ATTENTION_MAX_ITEMS);
+    list.innerHTML = shown.map((item) => `
+      <a class="attention-item attention-item--${item.type}" href="${item.href}">
+        ${RS.icon(ATTENTION_ICONS[item.type] || "info")}<span>${RS.esc(item.text)}</span>
+      </a>`).join("");
+
+    if (items.length > shown.length) {
+      const more = document.createElement("p");
+      more.className = "dashboard-loading";
+      more.textContent = `+ ${items.length - shown.length} más`;
+      list.appendChild(more);
+    }
+    RS.hydrateIcons();
+  }
+
   function renderClientCard(clientRow, projects) {
     const card = document.createElement("div");
+    card.id = `client-card-${clientRow.slug}`;
     card.className = "dashboard-card" + (clientRow.archived ? " dashboard-card--archived" : "");
+
+    // Badge chico de salud — mismo cálculo que alimenta el feed de
+    // atención de arriba, no una segunda versión.
+    const staleDays = clientRow.archived ? null : daysSinceLastActivity(clientRow, projects);
+    const staleBadge = (staleDays === null || staleDays >= ATTENTION_STALE_DAYS) && !clientRow.archived
+      ? `<span class="dashboard-badge dashboard-badge--stale">${staleDays === null ? "Sin actividad" : `Sin actividad hace ${staleDays}d`}</span>`
+      : "";
 
     const header = document.createElement("div");
     header.className = "dashboard-card__header";
     header.innerHTML = `
       <div class="dashboard-card__title">
         ${clientRow.name}
-        ${clientRow.archived ? `<span class="dashboard-badge dashboard-badge--archived">Archivado</span>` : ""}
+        ${clientRow.archived ? `<span class="dashboard-badge dashboard-badge--archived">Archivado</span>` : staleBadge}
       </div>
       <div class="dashboard-card__actions">
         <button class="btn btn--ghost btn--sm" data-action="edit">${RS.icon("pencil")} Editar</button>
@@ -176,6 +292,7 @@
       .then(([clients, projects]) => {
         allClients = clients;
         allProjects = projects;
+        renderAttentionFeed(computeAttentionItems(allClients, allProjects));
         renderFilteredList();
       })
       .catch((e) => {
